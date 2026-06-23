@@ -6,10 +6,28 @@
 
 ---
 
+## 0. 必须优先遵守的开发顺序
+
+后续所有开发、文档、报告、PPT、部署和重要修复都必须遵守：
+
+```text
+Obsidian 记录 -> 新建 OpenSpec change -> 开发实现 -> 回写 Obsidian 结果
+```
+
+具体要求：
+
+- 没有先写 Obsidian 记录时，不要创建 OpenSpec change。
+- 没有新的 OpenSpec change 时，不要开始修改合约、测试、前端、报告、PPT 或部署脚本。
+- 每个重要改动都要有独立的 `openspec/changes/<change-name>/`。
+- 完成实现、测试或部署后，必须把结果追加回 `ObsidianVault/04-开发记录/开发记录.md`。
+- 这条顺序优先于后续所有开发便利性考虑；不要为了快而跳过。
+
+---
+
 ## 1. 工作原则
 
 - 先理解现有文档，再进行代码实现。
-- 先更新设计，再修改合约或前端。
+- 先更新 Obsidian 记录，再创建新的 OpenSpec change，最后修改合约、前端、报告或 PPT。
 - 每次重要变更都要同步记录到 Obsidian vault。
 - 不覆盖用户已有内容，除非用户明确要求。
 - 代码、报告、PPT 必须围绕课程要求展开：
@@ -53,6 +71,26 @@ ObsidianVault/
 - `03-报告与展示/`：项目报告、PPT 大纲、演示脚本。
 - `04-开发记录/`：每日开发记录、问题和解决方案。
 
+### OpenSpec
+
+后续所有重要开发都必须使用 OpenSpec：
+
+```text
+openspec/
+├── project.md
+├── specs/
+└── changes/
+```
+
+使用规则：
+
+- `openspec/project.md`：项目背景、技术栈、工作流和全局约束。
+- `openspec/specs/`：已经确认的项目规格。
+- `openspec/changes/`：每次开发前创建一个新的 change，用于说明本次变更。
+- 每个 change 至少包含 `proposal.md` 和 `tasks.md`。
+- 涉及业务规则、状态机、角色权限、退款、仲裁、保证金、前端交互或部署流程变化时，必须补充对应 spec delta。
+- OpenSpec 内容应优先使用中文；仅保留工具要求的结构关键词、命令、目录名、代码标识和专有名词英文。
+
 ### 代码目录
 
 后续建议代码目录如下：
@@ -71,16 +109,35 @@ artifacts/      # Hardhat 生成文件，通常不手动编辑
 
 ## 3. 开发流程
 
-### Step 1：确认设计
+### Step 1：确认 Obsidian 记录
 
 实现前先检查：
 
 - `ObsidianVault/02-方案设计/项目讨论结果-去中心化二手交易担保托管.md`
 - `ObsidianVault/00-首页/项目首页.md`
+- 相关主题文档，例如 `ObsidianVault/02-方案设计/OpenSpec 工作流.md`
 
-如果需求发生变化，先更新方案设计文档，再修改代码。
+如果需求发生变化，先更新 Obsidian 中的方案设计、开发记录或对应主题文档。
 
-### Step 2：实现合约
+### Step 2：创建 OpenSpec change
+
+在任何代码、报告或 PPT 实现前，先创建新的 OpenSpec change：
+
+```text
+openspec/changes/<change-name>/
+├── proposal.md
+├── tasks.md
+└── specs/<capability>/spec.md  # 行为或需求变化时需要
+```
+
+要求：
+
+- change 名称使用短横线，例如 `add-escrow-contract`、`add-refund-flow`。
+- `proposal.md` 说明为什么改、改什么、影响范围。
+- `tasks.md` 拆分可验证任务。
+- OpenSpec change 创建完成后，才能开始实现。
+
+### Step 3：实现合约
 
 合约优先实现核心闭环：
 
@@ -102,7 +159,7 @@ artifacts/      # Hardhat 生成文件，通常不手动编辑
 - 是否防止重复放款或重复退款
 - 事件是否足够前端展示和报告说明
 
-### Step 3：编写测试
+### Step 4：编写测试
 
 每个核心流程至少有一个测试：
 
@@ -124,7 +181,7 @@ artifacts/      # Hardhat 生成文件，通常不手动编辑
 ObsidianVault/04-开发记录/开发记录.md
 ```
 
-### Step 4：实现前端
+### Step 5：实现前端
 
 前端建议使用：
 
@@ -146,7 +203,7 @@ ObsidianVault/04-开发记录/开发记录.md
 
 不要把前端做成纯介绍页。第一屏应该是可交互的 Demo 页面。
 
-### Step 5：部署测试网
+### Step 6：部署测试网
 
 部署到 Sepolia 后，需要记录：
 
