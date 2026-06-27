@@ -1,0 +1,21 @@
+{
+  "name": "web3-hackathon-assignment",
+  "version": "1.0.0",
+  "description": "去中心化二手交易担保托管平台。项目场景是校园二手交易，核心目标是用智能合约托管买家资金，避免卖家提前收款、买家单方面退款，并通过多签仲裁和仲裁员保证金处理纠纷。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LimboMusic/web3-hackathon-assignment.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/LimboMusic/web3-hackathon-assignment/issues"
+  },
+  "homepage": "https://github.com/LimboMusic/web3-hackathon-assignment#readme"
+}
