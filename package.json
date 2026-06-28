@@ -4,7 +4,8 @@
   "description": "去中心化二手交易担保托管平台。项目场景是校园二手交易，核心目标是用智能合约托管买家资金，避免卖家提前收款、买家单方面退款，并通过多签仲裁和仲裁员保证金处理纠纷。",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "hardhat compile",
+    "test": "hardhat test"
   },
   "repository": {
     "type": "git",
@@ -17,5 +18,14 @@
   "bugs": {
     "url": "https://github.com/LimboMusic/web3-hackathon-assignment/issues"
   },
-  "homepage": "https://github.com/LimboMusic/web3-hackathon-assignment#readme"
+  "homepage": "https://github.com/LimboMusic/web3-hackathon-assignment#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
+    "hardhat": "^2.28.6"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1"
+  }
 }
