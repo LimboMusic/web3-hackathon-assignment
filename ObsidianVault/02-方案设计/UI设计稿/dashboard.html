@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escrow Market - 去中心化二手交易担保托管平台</title>
+    <style>
+        /* 全局样式重置与基础变量 */
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --primary-light: #EFF6FF;
+            --secondary: #06B6D4;
+            --success: #16A34A;
+            --success-light: #DCFCE7;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --danger: #DC2626;
+            --danger-light: #FEE2E2;
+            --bg-main: #F6F8FB;
+            --bg-card: #FFFFFF;
+            --border-color: #E5E7EB;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --text-light: #9CA3AF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 侧边栏布局 */
+        .sidebar {
+            width: 240px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 24px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .menu-item a:hover {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .menu-item.active a {
+            background-color: var(--primary);
+            color: #FFFFFF;
+        }
+
+        /* 右侧主内容区域布局 */
+        .main-layout {
+            margin-left: 240px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            transition: all 0.3s ease;
+        }
+
+        /* 顶部状态栏 */
+        .top-bar {
+            height: 70px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            font-size: 13px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .status-value-badge {
+            background-color: #F3F4F6;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+            color: var(--text-main);
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .tx-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            background-color: #F3F4F6;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            background-color: var(--text-light);
+        }
+
+        .status-dot.idle { background-color: var(--text-light); }
+        .status-dot.pending { 
+            background-color: var(--warning); 
+            animation: pulse 1.5s infinite;
+        }
+        .status-dot.success { background-color: var(--success); }
+        .status-dot.failed { background-color: var(--danger); }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        .btn-connect {
+            background-color: var(--primary);
+            color: #FFFFFF;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn-connect:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .btn-connect:disabled {
+            background-color: #E5E7EB;
+            color: #9CA3AF;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* 主体内容排版 */
+        .content {
+            padding: 32px;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            margin-bottom: 28px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+
+        /* 数据卡片网格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .stat-card.primary::before { background-color: var(--primary); }
+        .stat-card.secondary::before { background-color: var(--secondary); }
+        .stat-card.warning::before { background-color: var(--warning); }
+        .stat-card.success::before { background-color: var(--success); }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .stat-title {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stat-icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-card.primary .stat-icon-box { background-color: var(--primary-light); color: var(--primary); }
+        .stat-card.secondary .stat-icon-box { background-color: #ECFEFF; color: var(--secondary); }
+        .stat-card.warning .stat-icon-box { background-color: var(--warning-light); color: var(--warning); }
+        .stat-card.success .stat-icon-box { background-color: var(--success-light); color: var(--success); }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .stat-desc {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 6px;
+        }
+
+        /* 核心演示区域大卡片结构 */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 1.6fr 1.1fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        .main-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .card-header-area {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        .card-title-group h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .card-title-group p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background-color: var(--success-light);
+            color: var(--success);
+        }
+
+        /* 演示交易卡片内部布局 */
+        .demo-trade-container {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 24px;
+        }
+
+        .trade-info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .info-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .info-value.eth-amount {
+            font-size: 20px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .address-box {
+            font-family: monospace;
+            background-color: #F8FAFC;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--text-muted);
+            display: inline-block;
+            max-width: max-content;
+        }
+
+        .trade-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-action-primary {
+            background-color: var(--primary);
+            color: #FFFFFF;
+            border: none;
+        }
+
+        .btn-action-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-action-secondary {
+            background-color: #FFFFFF;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-action-secondary:hover {
+            background-color: #F9FAFB;
+            border-color: #D1D5DB;
+        }
+
+        /* 右侧资金流向小图 */
+        .diagram-panel {
+            background-color: #F8FAFC;
+            border: 1px dashed #CBD5E1;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .diagram-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .flow-route {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        .flow-node {
+            background: #FFFFFF;
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .flow-node.highlight {
+            border-color: var(--primary);
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .flow-arrow {
+            color: var(--text-light);
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .flow-arrow-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+            font-weight: normal;
+        }
+
+        .flow-branches {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .flow-node.success-branch {
+            border-color: var(--success);
+            color: var(--success);
+        }
+        
+        .flow-node.danger-branch {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        /* 横向状态时间线 */
+        .timeline-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            margin-bottom: 28px;
+        }
+
+        .timeline-container {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin: 20px 0 10px 0;
+        }
+
+        .timeline-line-bg {
+            position: absolute;
+            top: 14px;
+            left: 5%;
+            right: 5%;
+            height: 4px;
+            background-color: #E5E7EB;
+            z-index: 1;
+        }
+
+        .timeline-line-progress {
+            position: absolute;
+            top: 14px;
+            left: 5%;
+            width: 45%; /* 到达 Delivered 节点 */
+            height: 4px;
+            background-color: var(--success);
+            z-index: 2;
+            transition: width 0.4s ease;
+        }
+
+        .timeline-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 3;
+            width: 18%;
+        }
+
+        .timeline-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #FFFFFF;
+            border: 3px solid #E5E7EB;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+        }
+
+        .timeline-step.completed .timeline-dot {
+            border-color: var(--success);
+            background-color: var(--success);
+            color: #FFFFFF;
+        }
+
+        .timeline-step.active .timeline-dot {
+            border-color: var(--success);
+            background-color: #FFFFFF;
+            color: var(--success);
+            box-shadow: 0 0 0 4px var(--success-light);
+        }
+
+        .timeline-label {
+            margin-top: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .timeline-step.completed .timeline-label,
+        .timeline-step.active .timeline-label {
+            color: var(--text-main);
+        }
+
+        .timeline-desc {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 2px;
+        }
+        .timeline-step.completed .timeline-desc,
+        .timeline-step.active .timeline-desc {
+            color: var(--text-muted);
+        }
+
+        /* 最近链上事件列表 */
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .event-item {
+            display: grid;
+            grid-template-columns: 140px 140px 1fr 120px;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: #F8FAFC;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+
+        .event-item:hover {
+            border-color: #CBD5E1;
+            background-color: #F1F5F9;
+        }
+
+        .event-time {
+            color: var(--text-light);
+            font-size: 12px;
+        }
+
+        .event-badge {
+            font-family: monospace;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        /* 细分事件颜色定义 */
+        .badge-created { background-color: var(--primary-light); color: var(--primary); }
+        .badge-purchased { background-color: #ECFEFF; color: var(--secondary); }
+        .badge-delivered { background-color: var(--success-light); color: var(--success); }
+        .badge-refund { background-color: var(--warning-light); color: var(--warning); }
+        .badge-dispute { background-color: var(--danger-light); color: var(--danger); }
+        .badge-vote { background-color: #F3E8FF; color: #9333EA; }
+
+        .event-desc {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .event-hash {
+            font-family: monospace;
+            color: var(--primary);
+            text-align: right;
+            font-size: 12px;
+        }
+
+        /* 模拟提示弹窗组件 (Toast) */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background-color: #1F2937;
+            color: #FFFFFF;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideIn 0.3s forwards;
+        }
+
+        @keyframes slideIn {
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* 响应式媒体查询 */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .dashboard-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                position: static;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .sidebar-menu {
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 12px;
+            }
+            .menu-item a {
+                padding: 8px 12px;
+            }
+            .main-layout {
+                margin-left: 0;
+            }
+            .top-bar {
+                flex-direction: column;
+                height: auto;
+                padding: 16px;
+                gap: 12px;
+                align-items: flex-start;
+            }
+            .status-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .event-item {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .event-desc, .event-hash {
+                grid-column: span 2;
+                text-align: left;
+            }
+            .timeline-container {
+                overflow-x: auto;
+                padding-bottom: 12px;
+            }
+            .timeline-step {
+                min-width: 120px;
+            }
+            .timeline-line-bg, .timeline-line-progress {
+                display: none; /* 移动端精简模型 */
+            }
+        }
+
+        @media (max-width: 550px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .demo-trade-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 左侧固定侧边栏 -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-logo">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Escrow Market</span>
+            </div>
+            <div class="brand-subtitle">链上二手交易担保系统</div>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item active">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                    <span>总览 Dashboard</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    <span>交易市场 Marketplace</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>交易详情 Trade Detail</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+                    <span>仲裁中心 Arbitration</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>部署演示 Deployment</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- 右侧主内容区域 -->
+    <div class="main-layout">
+        <!-- 顶部状态栏 -->
+        <header class="top-bar">
+            <div class="status-left">
+                <div class="status-item">
+                    <span class="status-label">网络:</span>
+                    <span class="status-value-badge" style="color: var(--secondary); font-weight: bold;">Sepolia 测试网</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">合约部署地址:</span>
+                    <span class="status-value-badge" title="0x9b2c3d4e5f6a7182930415161718192021224a71">0x9b2...4a71</span>
+                </div>
+            </div>
+            <div class="status-right">
+                <div class="tx-status">
+                    <span class="status-label">交易状态:</span>
+                    <span id="tx-status-dot" class="status-dot idle"></span>
+                    <span id="tx-status-text" style="color: var(--text-muted);">Idle</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">钱包:</span>
+                    <span id="wallet-address-text" class="status-value-badge">未连接</span>
+                </div>
+                <button id="connect-wallet-btn" class="btn-connect">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><path d="M22 10h-6a2 2 0 0 0-2 2v0a2 2 0 0 0 2 2h6"/></svg>
+                    <span id="connect-btn-text">连接钱包</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主体内容 -->
+        <main class="content">
+            <!-- 页面标题 -->
+            <div class="page-header">
+                <h1 class="page-title">链上二手交易担保托管平台</h1>
+                <p class="page-subtitle">基于智能合约的去中心化二手电商双边担保平台。买家资金锁定在托管合约中，待收到商品并确认无误后自动向卖家放款；若发生交付纠纷，系统将引入去中心化仲裁员网络，通过多方质押投票公平裁决资金归属。</p>
+            </div>
+
+            <!-- 四个核心数据指标卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="stat-header">
+                        <span class="stat-title">当前挂牌商品数</span>
+                        <div class="stat-icon-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value">3 <span style="font-size: 14px; font-weight: normal; color: var(--text-light);">件</span></div>
+                    <div class="stat-desc">智能合约全网活跃售卖品</div>
+                </div>
+                
+                <div class="stat-card secondary">
+                    <div class="stat-header">
+                        <span class="stat-title">合约托管中金额</span>
+                        <div class="stat-icon-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 12 15 2 8.5 12 2"/><polygon points="2 15.5 12 22 22 15.5 12 15 2 15.5"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value">1.20 <span style="font-size: 14px; font-weight: 700; color: var(--secondary);">ETH</span></div>
+                    <div class="stat-desc">当前锁定在托管合约中的资金池</div>
+                </div>
+
+                <div class="stat-card warning">
+                    <div class="stat-header">
+                        <span class="stat-title">进行中纠纷仲裁</span>
+                        <div class="stat-icon-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value">1 <span style="font-size: 14px; font-weight: normal; color: var(--text-light);">起</span></div>
+                    <div class="stat-desc">买卖双方存在分歧进入投票流程</div>
+                </div>
+
+                <div class="stat-card success">
+                    <div class="stat-header">
+                        <span class="stat-title">全网活跃仲裁员</span>
+                        <div class="stat-icon-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value">3 <span style="font-size: 14px; font-weight: normal; color: var(--text-light);">名</span></div>
+                    <div class="stat-desc">已质押保证金并具备投票权的独立节点</div>
+                </div>
+            </div>
+
+            <!-- 核心行：当前演示交易卡片 + 资金流向小图 -->
+            <div class="dashboard-row">
+                <!-- 演示交易大卡片 -->
+                <div class="main-card">
+                    <div class="card-header-area">
+                        <div class="card-title-group">
+                            <h2>当前课堂演示交易快照</h2>
+                            <p>正在链上进行状态演示与代码测试的二手交易订单</p>
+                        </div>
+                        <span class="badge badge-success">已交付 Delivered</span>
+                    </div>
+
+                    <div class="demo-trade-container">
+                        <!-- 左边信息面板 -->
+                        <div class="trade-info-panel">
+                            <div class="info-row">
+                                <span class="info-label">商品名称</span>
+                                <span class="info-value" style="font-size: 16px;">客制化二手机械键盘 (99新)</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">锁定托管金额</span>
+                                <span class="info-value eth-amount">0.50 ETH</span>
+                                <span style="font-size: 11px; color: var(--success); font-weight: 500;">✓ 0.5 ETH locked in contract safely</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">卖家账户地址 (Seller)</span>
+                                <span class="address-box">0xA12F3...89FCa3</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">买家账户地址 (Buyer)</span>
+                                <span class="address-box">0xB456d...12C89e</span>
+                            </div>
+                            <div class="trade-actions">
+                                <button class="btn-action btn-action-primary" onclick="simulateTx('view_detail')">查看交易详情</button>
+                                <button class="btn-action btn-action-secondary" onclick="simulateTx('arbitration')">进入仲裁中心</button>
+                            </div>
+                        </div>
+
+                        <!-- 右边资金流向小图 -->
+                        <div class="diagram-panel">
+                            <div class="diagram-title">本阶段智能合约资金流向图</div>
+                            <div class="flow-route">
+                                <div class="flow-node">
+                                    买家钱包 (0xB456...)
+                                    <div style="font-weight: normal; font-size: 10px; color: var(--text-light); margin-top: 2px;">已扣款 0.5 ETH</div>
+                                </div>
+                                <div class="flow-arrow">
+                                    <span class="flow-arrow-label">1. 调用 purchaseItem()</span>
+                                    ↓
+                                </div>
+                                <div class="flow-node highlight">
+                                    智能合约托管账户 (0x9b2...)
+                                    <div style="font-size: 10px; color: var(--primary); font-weight: bold; margin-top: 2px;">当前锁仓：0.5 ETH</div>
+                                </div>
+                                <div class="flow-arrow">
+                                    <span class="flow-arrow-label">2. 卖家已标记发货，等待买家确认</span>
+                                    ↓
+                                </div>
+                                <div class="flow-branches">
+                                    <div class="flow-node success-branch" style="opacity: 0.85;">
+                                        正常释放 → 卖家
+                                        <div style="font-weight: normal; font-size: 9px; color: var(--text-muted);">confirmReceived()</div>
+                                    </div>
+                                    <div class="flow-node danger-branch" style="opacity: 0.85;">
+                                        发生纠纷 → 仲裁裁决
+                                        <div style="font-weight: normal; font-size: 9px; color: var(--text-muted);">openDispute()</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧：最近链上事件（原横向排版，此处放置可保证在1280px下极佳视觉平衡） -->
+                <div class="main-card">
+                    <div class="card-header-area" style="margin-bottom: 16px; padding-bottom: 12px;">
+                        <div class="card-title-group">
+                            <h2>最近链上事件 (Recent Events)</h2>
+                            <p>实时监听智能合约 Event 抛出的链上日志</p>
+                        </div>
+                    </div>
+                    <div class="events-list">
+                        <div class="event-item">
+                            <span class="event-time">10秒前</span>
+                            <span class="event-badge badge-vote">VoteSubmitted</span>
+                            <span class="event-desc">仲裁员 0x4f2... 提交裁决投票</span>
+                            <span class="event-hash">0x7d21...e31b</span>
+                        </div>
+                        <div class="event-item">
+                            <span class="event-time">3分钟前</span>
+                            <span class="event-badge badge-dispute">DisputeOpened</span>
+                            <span class="event-desc">买家对订单发起纠纷仲裁申请</span>
+                            <span class="event-hash">0x4a92...9bf2</span>
+                        </div>
+                        <div class="event-item">
+                            <span class="event-time">2小时前</span>
+                            <span class="event-badge badge-refund">RefundRequested</span>
+                            <span class="event-desc">买家发起退款申请，等待卖家响应</span>
+                            <span class="event-hash">0x12c4...aa6c</span>
+                        </div>
+                        <div class="event-item">
+                            <span class="event-time">5小时前</span>
+                            <span class="event-badge badge-delivered">ItemDelivered</span>
+                            <span class="event-desc">卖家顺丰发货，标记状态为已交付</span>
+                            <span class="event-hash">0x5f81...781a</span>
+                        </div>
+                        <div class="event-item">
+                            <span class="event-time">1天前</span>
+                            <span class="event-badge badge-purchased">ItemPurchased</span>
+                            <span class="event-desc">买家足额支付，0.5 ETH 锁入合约</span>
+                            <span class="event-hash">0xbc32...00fa</span>
+                        </div>
+                        <div class="event-item">
+                            <span class="event-time">2天前</span>
+                            <span class="event-badge badge-created">ItemCreated</span>
+                            <span class="event-desc">卖家发布商品“二手机械键盘”</span>
+                            <span class="event-hash">0x8831...fa4b</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 横向状态时间线大卡片 -->
+            <div class="timeline-card">
+                <div class="card-header-area" style="margin-bottom: 12px; border-bottom: none; padding-bottom: 0;">
+                    <div class="card-title-group">
+                        <h2>订单生命周期智能合约状态机进度</h2>
+                        <p>对应 Solidity 状态枚举：Created, Locked, Delivered, Disputed, Inactive</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-container">
+                    <!-- 背景线与激活进度线 -->
+                    <div class="timeline-line-bg"></div>
+                    <div class="timeline-line-progress" id="timeline-progress-bar"></div>
+
+                    <!-- 节点 1 -->
+                    <div class="timeline-step completed">
+                        <div class="timeline-dot">✓</div>
+                        <div class="timeline-label">Created</div>
+                        <div class="timeline-desc">商品发布</div>
+                    </div>
+                    <!-- 节点 2 -->
+                    <div class="timeline-step completed">
+                        <div class="timeline-dot">✓</div>
+                        <div class="timeline-label">Locked</div>
+                        <div class="timeline-desc">买家向合约质押款</div>
+                    </div>
+                    <!-- 节点 3 -->
+                    <div class="timeline-step active">
+                        <div class="timeline-dot">3</div>
+                        <div class="timeline-label" style="color: var(--primary); font-weight: 700;">Delivered</div>
+                        <div class="timeline-desc">卖家交付/已发货</div>
+                    </div>
+                    <!-- 节点 4 -->
+                    <div class="timeline-step">
+                        <div class="timeline-dot">4</div>
+                        <div class="timeline-label">Disputed</div>
+                        <div class="timeline-desc">申请仲裁纠纷</div>
+                    </div>
+                    <!-- 节点 5 -->
+                    <div class="timeline-step">
+                        <div class="timeline-dot">5</div>
+                        <div class="timeline-label">Inactive</div>
+                        <div class="timeline-desc">放款/退款结束</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- 前端模拟交互逻辑 JS -->
+    <script>
+        // DOM 节点获取
+        const connectBtn = document.getElementById('connect-wallet-btn');
+        const connectBtnText = document.getElementById('connect-btn-text');
+        const walletAddressText = document.getElementById('wallet-address-text');
+        const txStatusDot = document.getElementById('tx-status-dot');
+        const txStatusText = document.getElementById('tx-status-text');
+        const toastContainer = document.getElementById('toast-container');
+
+        // 全局状态监控变量
+        let isWalletConnected = false;
+
+        // 自定义纯前端无刷新的 Toast 消息提示
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            // 根据不同业务类型变换背景色
+            if(type === 'success') toast.style.backgroundColor = '#16A34A';
+            if(type === 'warning') toast.style.backgroundColor = '#F59E0B';
+            if(type === 'error') toast.style.backgroundColor = '#DC2626';
+
+            // SVG 提示小图标
+            toast.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>${message}</span>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // 3秒后自动销毁
+            setTimeout(() => {
+                toast.style.animation = 'none';
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 按钮及行为模拟事件
+        function simulateTx(actionType) {
+            if (!isWalletConnected) {
+                showToast('请先在右上方点击 [连接钱包] 导入 Web3 账户节点', 'warning');
+                return;
+            }
+
+            if (actionType === 'view_detail') {
+                showToast('正在读取智能合约 OrderData 结构体... 数据加载成功', 'success');
+            } else if (actionType === 'arbitration') {
+                showToast('重定向中... 已载入当前订单的去中心化仲裁投票池', 'success');
+            }
+        }
+
+        // 连接钱包交互流程模拟
+        connectBtn.addEventListener('click', () => {
+            if (isWalletConnected) return;
+
+            // 1. 改变钱包连接按钮状态
+            connectBtn.disabled = true;
+            connectBtnText.innerText = '正在连接...';
+            
+            // 2. 同步启动状态栏 Tx Status 为 Pending（模拟链上广播延迟）
+            txStatusDot.className = 'status-dot pending';
+            txStatusText.innerText = 'Pending';
+            txStatusText.style.color = 'var(--warning)';
+            showToast('正在调起 MetaMask 签名授权获取公开地址...', 'info');
+
+            // 3. 延时 1.2 秒模拟区块打包确认
+            setTimeout(() => {
+                // 更新钱包地址显示
+                walletAddressText.innerText = '0x7a3...91f2';
+                walletAddressText.style.color = 'var(--success)';
+                walletAddressText.style.borderColor = 'var(--success)';
+                
+                // 转换 Tx Status 状态为 Success
+                txStatusDot.className = 'status-dot success';
+                txStatusText.innerText = 'Success';
+                txStatusText.style.color = 'var(--success)';
+                
+                connectBtnText.innerText = '已连接钱包';
+                isWalletConnected = true;
+
+                showToast('钱包授权成功！成功绑定地址: 0x7a3...91f2', 'success');
+                showToast('链上状态机轮询同步完成，所有合约只读方法已放开。', 'success');
+
+                // 4. 保持 Success 1.5 秒后将顶栏 Tx Status 状态无痕回拨为 Idle，符合产品真实调动感
+                setTimeout(() => {
+                    txStatusDot.className = 'status-dot idle';
+                    txStatusText.innerText = 'Idle';
+                    txStatusText.style.color = 'var(--text-muted)';
+                }, 1800);
+
+            }, 1200);
+        });
+    </script>
+</body>
+</html>

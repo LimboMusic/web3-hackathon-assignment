@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易市场 Marketplace - 去中心化二手交易平台</title>
+    <style>
+        /* ================= 基础重置与变量 ================= */
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --primary-light: #EFF6FF;
+            --success: #16A34A;
+            --success-light: #DCFCE7;
+            --warning: #F59E0B;
+            --danger: #DC2626;
+            --bg-main: #F6F8FB;
+            --bg-card: #FFFFFF;
+            --border-color: #E5E7EB;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --text-light: #9CA3AF;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ================= 侧边栏 ================= */
+        .sidebar {
+            width: 240px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-logo {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 18px; font-weight: 700; color: var(--primary);
+        }
+
+        .brand-subtitle {
+            font-size: 11px; color: var(--text-muted);
+            margin-top: 4px; font-weight: 500;
+        }
+
+        .sidebar-menu {
+            list-style: none; padding: 24px 12px;
+            display: flex; flex-direction: column; gap: 4px; flex: 1;
+        }
+
+        .menu-item a {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px; color: var(--text-muted);
+            text-decoration: none; font-size: 14px; font-weight: 500;
+            border-radius: 8px; transition: all 0.2s;
+        }
+
+        .menu-item a:hover { background-color: var(--primary-light); color: var(--primary); }
+        .menu-item.active a { background-color: var(--primary); color: #FFFFFF; }
+
+        /* ================= 页面主体架构 ================= */
+        .main-layout {
+            margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-width: 0;
+        }
+
+        /* 顶部状态栏 */
+        .top-bar {
+            height: 70px; background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 32px; position: sticky; top: 0; z-index: 90;
+        }
+
+        .status-left { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+        .status-item { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+        .status-label { font-weight: 600; color: var(--text-main); }
+        .status-value-badge {
+            background-color: #F3F4F6; padding: 4px 8px; border-radius: 6px;
+            font-family: monospace; color: var(--text-main); font-size: 12px; border: 1px solid var(--border-color);
+        }
+
+        .status-right { display: flex; align-items: center; gap: 16px; }
+        .tx-status {
+            display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500;
+            background-color: #F3F4F6; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border-color);
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .status-dot.idle { background-color: var(--text-light); }
+        .status-dot.pending { background-color: var(--warning); animation: pulse 1.5s infinite; }
+        .status-dot.success { background-color: var(--success); }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+        .btn {
+            border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+            gap: 6px; transition: all 0.2s; height: 36px; padding: 0 16px;
+        }
+        .btn-primary { background-color: var(--primary); color: #FFFFFF; }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: #FFFFFF; border: 1px solid var(--border-color); color: var(--text-main); }
+        .btn-secondary:hover:not(:disabled) { background-color: #F9FAFB; border-color: #D1D5DB; }
+        .btn:disabled { background-color: #E5E7EB; color: #9CA3AF; cursor: not-allowed; border-color: transparent; }
+
+        /* 内容区排版 */
+        .content { padding: 32px; max-width: 1600px; width: 100%; margin: 0 auto; }
+        .page-header { margin-bottom: 24px; }
+        .page-title { font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
+        .page-subtitle { font-size: 14px; color: var(--text-muted); }
+
+        .marketplace-layout { display: flex; gap: 24px; align-items: flex-start; }
+        .main-column { flex: 1; min-width: 0; }
+        .side-column { width: 340px; position: sticky; top: 94px; }
+
+        /* ================= 工具栏 ================= */
+        .toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; gap: 16px; flex-wrap: wrap;
+        }
+        .toolbar-left { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 300px; }
+        
+        .search-box {
+            position: relative; flex: 1; max-width: 320px;
+        }
+        .search-box input {
+            width: 100%; height: 36px; padding: 0 16px 0 36px; border: 1px solid var(--border-color);
+            border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s;
+        }
+        .search-box input:focus { border-color: var(--primary); }
+        .search-box svg {
+            position: absolute; left: 12px; top: 10px; color: var(--text-light);
+        }
+
+        .filter-chips { display: flex; gap: 8px; }
+        .chip {
+            padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+            background-color: #FFFFFF; border: 1px solid var(--border-color); color: var(--text-muted);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .chip:hover { border-color: var(--primary-light); background-color: var(--primary-light); color: var(--primary); }
+        .chip.active { background-color: var(--primary); border-color: var(--primary); color: #FFFFFF; }
+
+        .toolbar-right { display: flex; align-items: center; gap: 12px; }
+        .sort-select {
+            height: 36px; padding: 0 12px; border: 1px solid var(--border-color);
+            border-radius: 8px; font-size: 13px; color: var(--text-main); outline: none;
+            background-color: #FFFFFF; cursor: pointer;
+        }
+
+        /* ================= 商品卡片网格 ================= */
+        .items-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
+        }
+        
+        .item-card {
+            background-color: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; flex-direction: column;
+        }
+        .item-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); border-color: #D1D5DB; }
+
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .item-title { font-size: 16px; font-weight: 700; color: var(--text-main); line-height: 1.4; }
+        
+        /* 状态标签 */
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+            border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap;
+        }
+        .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+        
+        .status-created { background-color: #F3F4F6; color: #4B5563; }
+        .status-created .badge-dot { background-color: #6B7280; }
+        
+        .status-locked { background-color: var(--primary-light); color: var(--primary); }
+        .status-locked .badge-dot { background-color: var(--primary); }
+        
+        .status-delivered { background-color: var(--success-light); color: var(--success); }
+        .status-delivered .badge-dot { background-color: var(--success); }
+        
+        .status-inactive { background-color: #E5E7EB; color: #374151; }
+        .status-inactive .badge-dot { background-color: #4B5563; }
+
+        .item-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; flex: 1; }
+        
+        .item-price { margin-bottom: 16px; display: flex; align-items: baseline; gap: 4px; }
+        .price-val { font-size: 22px; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .price-unit { font-size: 13px; color: var(--text-light); font-weight: 600; }
+
+        .item-meta {
+            background-color: #F8FAFC; border-radius: 8px; padding: 12px;
+            display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;
+        }
+        .meta-row { display: flex; justify-content: space-between; font-size: 12px; }
+        .meta-label { color: var(--text-light); }
+        .meta-value { color: var(--text-main); font-weight: 500; font-family: monospace; }
+
+        .item-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* ================= 创建商品表单 (右侧栏) ================= */
+        .create-card {
+            background-color: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .create-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
+        .form-control {
+            width: 100%; border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--text-main);
+            outline: none; transition: border-color 0.2s;
+        }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+        textarea.form-control { resize: vertical; min-height: 60px; }
+        
+        .input-with-suffix { position: relative; }
+        .input-suffix {
+            position: absolute; right: 12px; top: 10px; font-size: 13px; color: var(--text-light); font-weight: 600;
+        }
+
+        .btn-submit { width: 100%; height: 40px; margin-top: 8px; }
+
+        /* ================= Toast 提示 ================= */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background-color: #1F2937; color: #FFFFFF; padding: 12px 20px; border-radius: 8px;
+            font-size: 13px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex; align-items: center; gap: 8px; transform: translateY(20px); opacity: 0; animation: slideIn 0.3s forwards;
+        }
+        @keyframes slideIn { to { transform: translateY(0); opacity: 1; } }
+
+        /* 响应式 */
+        @media (max-width: 1100px) {
+            .marketplace-layout { flex-direction: column; }
+            .side-column { width: 100%; position: static; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-layout { margin-left: 0; }
+            .items-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-logo">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Escrow Market</span>
+            </div>
+            <div class="brand-subtitle">链上二手交易担保系统</div>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                    <span>总览 Dashboard</span>
+                </a>
+            </li>
+            <li class="menu-item active">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    <span>交易市场 Marketplace</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>交易详情 Trade Detail</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+                    <span>仲裁中心 Arbitration</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>部署演示 Deployment</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- 主容器 -->
+    <div class="main-layout">
+        <!-- 顶栏 -->
+        <header class="top-bar">
+            <div class="status-left">
+                <div class="status-item">
+                    <span class="status-label">网络:</span>
+                    <span class="status-value-badge">Sepolia</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">合约:</span>
+                    <span class="status-value-badge">0x9b2...4a71</span>
+                </div>
+            </div>
+            <div class="status-right">
+                <div class="tx-status">
+                    <span class="status-label">状态:</span>
+                    <span id="tx-status-dot" class="status-dot idle"></span>
+                    <span id="tx-status-text" style="color: var(--text-muted);">Idle</span>
+                </div>
+                <div class="status-item">
+                    <span id="wallet-address-text" class="status-value-badge">未连接</span>
+                </div>
+                <button id="connect-wallet-btn" class="btn btn-primary" onclick="connectWallet()">连接钱包</button>
+            </div>
+        </header>
+
+        <!-- 内容区 -->
+        <main class="content">
+            <div class="page-header">
+                <h1 class="page-title">交易市场</h1>
+                <p class="page-subtitle">浏览商品、创建挂单。买家付款后，资金将安全托管于智能合约，直至交付确认。</p>
+            </div>
+
+            <div class="marketplace-layout">
+                <!-- 左侧：商品列表 -->
+                <div class="main-column">
+                    <!-- 工具栏 -->
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <div class="search-box">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <input type="text" placeholder="搜索商品名称、地址或 ID...">
+                            </div>
+                            <div class="filter-chips">
+                                <button class="chip active" onclick="setFilter('All', this)">全部</button>
+                                <button class="chip" onclick="setFilter('Created', this)">可购买</button>
+                                <button class="chip" onclick="setFilter('Locked', this)">托管中</button>
+                                <button class="chip" onclick="setFilter('Delivered', this)">已交付</button>
+                            </div>
+                        </div>
+                        <div class="toolbar-right">
+                            <select class="sort-select">
+                                <option>最新创建</option>
+                                <option>价格: 从低到高</option>
+                                <option>价格: 从高到低</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 商品网格 -->
+                    <div class="items-grid" id="items-grid">
+                        <!-- JS 动态渲染 -->
+                    </div>
+                </div>
+
+                <!-- 右侧：创建商品表单 -->
+                <div class="side-column">
+                    <div class="create-card">
+                        <h3>创建新商品</h3>
+                        <form id="create-form" onsubmit="handleCreate(event)">
+                            <div class="form-group">
+                                <label class="form-label">商品标题</label>
+                                <input type="text" id="c-title" class="form-control" placeholder="例如：iPhone 13 Pro" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">商品描述</label>
+                                <textarea id="c-desc" class="form-control" placeholder="简要描述物品状态..." required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">出售价格</label>
+                                <div class="input-with-suffix">
+                                    <input type="number" step="0.001" id="c-price" class="form-control" placeholder="0.00" required>
+                                    <span class="input-suffix">ETH</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">发货窗口时间</label>
+                                <div class="input-with-suffix">
+                                    <input type="number" id="c-delivery" class="form-control" value="24" required>
+                                    <span class="input-suffix">小时</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">买家确认窗口</label>
+                                <div class="input-with-suffix">
+                                    <input type="number" id="c-confirm" class="form-control" value="48" required>
+                                    <span class="input-suffix">小时</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-submit">上链创建商品</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // --- 核心状态 ---
+        let isConnected = false;
+        let currentFilter = 'All';
+        
+        // 初始商品数据
+        let nextId = 5;
+        let itemsData = [
+            { id: 4, title: '二手机械键盘', desc: '红轴，99新，带原包装', price: '0.50', seller: '0xA12...89F', status: 'Created', delivery: '1', confirm: '1' },
+            { id: 3, title: '显示器支架', desc: '铝合金气动支架，承重9kg', price: '0.20', seller: '0xC31...77A', status: 'Locked', delivery: '24', confirm: '48' },
+            { id: 2, title: '蓝牙耳机', desc: '降噪耳机，电池健康度90%', price: '0.15', seller: '0xE19...42B', status: 'Delivered', delivery: '1', confirm: '1' },
+            { id: 1, title: '课程教材套装', desc: '计算机科学专业核心教材合集', price: '0.08', seller: '0xD88...21F', status: 'Inactive', delivery: '72', confirm: '72' }
+        ];
+
+        const statusMap = {
+            'Created': { cls: 'status-created', text: 'Created (可买)' },
+            'Locked': { cls: 'status-locked', text: 'Locked (托管)' },
+            'Delivered': { cls: 'status-delivered', text: 'Delivered' },
+            'Inactive': { cls: 'status-inactive', text: 'Inactive' }
+        };
+
+        // --- 渲染引擎 ---
+        function renderItems() {
+            const grid = document.getElementById('items-grid');
+            grid.innerHTML = '';
+
+            const filtered = currentFilter === 'All' 
+                ? itemsData 
+                : itemsData.filter(i => i.status === currentFilter);
+
+            filtered.forEach(item => {
+                const s = statusMap[item.status];
+                const canBuy = item.status === 'Created';
+                
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.innerHTML = `
+                    <div class="item-header">
+                        <h3 class="item-title">${item.title}</h3>
+                        <div class="status-badge ${s.cls}">
+                            <div class="badge-dot"></div>
+                            ${s.text}
+                        </div>
+                    </div>
+                    <p class="item-desc">${item.desc}</p>
+                    <div class="item-price">
+                        <span class="price-val">${item.price}</span>
+                        <span class="price-unit">ETH</span>
+                    </div>
+                    <div class="item-meta">
+                        <div class="meta-row">
+                            <span class="meta-label">卖家地址:</span>
+                            <span class="meta-value">${item.seller}</span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">商品 ID:</span>
+                            <span class="meta-value">#${item.id}</span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">交付/确认窗口:</span>
+                            <span class="meta-value">${item.delivery}h / ${item.confirm}h</span>
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-secondary" onclick="showToast('查看详情界面尚未实现', 'info')">查看详情</button>
+                        <button class="btn btn-primary" ${!canBuy ? 'disabled' : ''} onclick="buyItem(${item.id})">
+                            ${canBuy ? '付款购买' : '不可购买'}
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- 交互功能 ---
+        function connectWallet() {
+            if (isConnected) return;
+            const btn = document.getElementById('connect-wallet-btn');
+            btn.innerText = '正在连接...';
+            btn.disabled = true;
+            
+            triggerTxStatus('pending', 'Pending');
+            
+            setTimeout(() => {
+                document.getElementById('wallet-address-text').innerText = '0x7a3...91f2';
+                document.getElementById('wallet-address-text').style.color = 'var(--success)';
+                btn.innerText = '已连接';
+                isConnected = true;
+                
+                triggerTxStatus('success', 'Success');
+                showToast('钱包连接成功 0x7a3...91f2', 'success');
+                
+                setTimeout(() => triggerTxStatus('idle', 'Idle'), 2000);
+            }, 1000);
+        }
+
+        function setFilter(status, el) {
+            currentFilter = status;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            renderItems();
+        }
+
+        function handleCreate(e) {
+            e.preventDefault();
+            if (!isConnected) {
+                showToast('请先连接钱包！', 'warning');
+                return;
+            }
+
+            const title = document.getElementById('c-title').value;
+            const desc = document.getElementById('c-desc').value;
+            const price = parseFloat(document.getElementById('c-price').value).toFixed(2);
+            const delivery = document.getElementById('c-delivery').value;
+            const confirm = document.getElementById('c-confirm').value;
+
+            triggerTxStatus('pending', 'Pending');
+            const submitBtn = document.querySelector('.btn-submit');
+            submitBtn.innerText = '上链确认中...';
+            submitBtn.disabled = true;
+
+            setTimeout(() => {
+                itemsData.unshift({
+                    id: nextId++,
+                    title, desc, price,
+                    seller: '0x7a3...91f2',
+                    status: 'Created',
+                    delivery, confirm
+                });
+                
+                document.getElementById('create-form').reset();
+                submitBtn.innerText = '上链创建商品';
+                submitBtn.disabled = false;
+                
+                triggerTxStatus('success', 'Success');
+                showToast('商品发布成功！事件: ItemCreated', 'success');
+                renderItems();
+                
+                setTimeout(() => triggerTxStatus('idle', 'Idle'), 2000);
+            }, 1500);
+        }
+
+        function buyItem(id) {
+            if (!isConnected) {
+                showToast('购买前请先连接钱包！', 'warning');
+                return;
+            }
+
+            triggerTxStatus('pending', 'Pending');
+            
+            setTimeout(() => {
+                const idx = itemsData.findIndex(i => i.id === id);
+                if(idx > -1) {
+                    itemsData[idx].status = 'Locked';
+                }
+                
+                triggerTxStatus('success', 'Success');
+                showToast(`购买成功！资金已打入托管合约，事件: ItemPurchased`, 'success');
+                renderItems();
+                
+                setTimeout(() => triggerTxStatus('idle', 'Idle'), 2000);
+            }, 1500);
+        }
+
+        // --- 辅助工具 ---
+        function triggerTxStatus(state, text) {
+            const dot = document.getElementById('tx-status-dot');
+            const txt = document.getElementById('tx-status-text');
+            dot.className = `status-dot ${state}`;
+            txt.innerText = text;
+            
+            if(state === 'pending') txt.style.color = 'var(--warning)';
+            else if(state === 'success') txt.style.color = 'var(--success)';
+            else txt.style.color = 'var(--text-muted)';
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if(type === 'success') toast.style.backgroundColor = '#16A34A';
+            if(type === 'warning') toast.style.backgroundColor = '#F59E0B';
+            
+            toast.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 初始渲染
+        renderItems();
+    </script>
+</body>
+</html>

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仲裁中心 Arbitration - Escrow Market</title>
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --primary-light: #EFF6FF;
+            --success: #16A34A;
+            --success-hover: #15803D;
+            --success-light: #DCFCE7;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --danger: #DC2626;
+            --danger-hover: #B91C1C;
+            --danger-light: #FEE2E2;
+            --bg-main: #F6F8FB;
+            --bg-card: #FFFFFF;
+            --border-color: #E5E7EB;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --text-light: #9CA3AF;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ---------------- Sidebar ---------------- */
+        .sidebar {
+            width: 240px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+        .brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--primary);
+        }
+        .nav-menu { padding: 20px 12px; display: flex; flex-direction: column; gap: 8px; }
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { background: #EFF6FF; color: var(--primary); }
+        .nav-item.active { background: var(--primary); color: #fff; }
+
+        /* ---------------- Main Layout ---------------- */
+        .main-layout { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        
+        .top-bar {
+            height: 70px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky; top: 0; z-index: 90;
+        }
+        .top-info { display: flex; gap: 24px; font-size: 13px; color: var(--text-muted); }
+        .info-badge { background: #F3F4F6; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-main); font-family: var(--font-mono); }
+        
+        .tx-status-bar { display: flex; align-items: center; gap: 16px; }
+        .tx-indicator { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; background: #F3F4F6; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-light); }
+        .dot.pending { background: var(--warning); animation: pulse 1s infinite; }
+        .dot.success { background: var(--success); }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        .btn-connect {
+            background: var(--primary); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .btn-connect:hover { background: var(--primary-hover); }
+
+        /* ---------------- Content & Cards ---------------- */
+        .content { padding: 32px; max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 24px; }
+        
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .section-title { font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+
+        /* ---------------- Dispute Summary Card ---------------- */
+        .dispute-summary { display: flex; justify-content: space-between; align-items: flex-start; }
+        .summary-main h1 { font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
+        .summary-main p { font-size: 14px; color: var(--text-muted); }
+        
+        .capsule { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .capsule-danger { background: var(--danger-light); color: var(--danger); }
+        .capsule-success { background: var(--success-light); color: var(--success); }
+        .capsule-warning { background: var(--warning-light); color: var(--warning); }
+        .capsule-primary { background: var(--primary-light); color: var(--primary); }
+        .capsule-neutral { background: #F3F4F6; color: #4B5563; }
+        .capsule-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .grid-item { display: flex; flex-direction: column; gap: 4px; }
+        .grid-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .grid-val { font-size: 15px; font-weight: 600; color: var(--text-main); font-family: var(--font-mono); }
+        .grid-val.eth { color: var(--primary); font-size: 18px; font-variant-numeric: tabular-nums; }
+
+        /* ---------------- Three Columns Layout ---------------- */
+        .three-column-grid { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 24px; align-items: start; }
+        
+        /* Evidence Column */
+        .evidence-box { background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+        .hash-text { font-family: var(--font-mono); font-size: 12px; color: var(--text-main); background: #fff; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; word-break: break-all; margin: 8px 0; }
+        
+        /* Voting Column */
+        .voting-stage { display: flex; flex-direction: column; gap: 14px; text-align: center; }
+        .btn-vote { height: 46px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-vote-buyer { background: linear-gradient(135deg, #2563EB, #1D4ED8); }
+        .btn-vote-buyer:hover:not(:disabled) { background: #1D4ED8; }
+        .btn-vote-seller { background: linear-gradient(135deg, #16A34A, #15803D); }
+        .btn-vote-seller:hover:not(:disabled) { background: #15803D; }
+        .btn-vote:disabled { background: #E5E7EB; color: #9CA3AF; cursor: not-allowed; }
+        .vote-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; text-align: left; background: #F8FAFC; padding: 10px; border-radius: 6px; }
+
+        /* Staking Column */
+        .stake-status { background: #F8FAFC; padding: 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; font-size: 13px; }
+        
+        .btn { width: 100%; height: 38px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-outline { background: #fff; border-color: var(--border-color); color: var(--text-main); }
+        .btn-outline:hover:not(:disabled) { background: #F9FAFB; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+        .btn:disabled { background: #E5E7EB; color: #9CA3AF; cursor: not-allowed; border-color: transparent; }
+
+        /* ---------------- Progress & Result Area ---------------- */
+        .results-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        
+        .progress-block { display: flex; flex-direction: column; gap: 16px; }
+        .progress-wrapper { display: flex; flex-direction: column; gap: 6px; }
+        .progress-labels { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+        .progress-bar-bg { height: 12px; background: #E5E7EB; border-radius: 6px; overflow: hidden; position: relative; }
+        .progress-bar-fill { height: 100%; border-radius: 6px; transition: width 0.4s ease; width: 0%; }
+        .fill-buyer { background: var(--primary); }
+        .fill-seller { background: var(--success); }
+
+        .verdict-card { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
+        .verdict-title { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
+        .verdict-value { font-size: 18px; font-weight: 700; color: var(--text-main); }
+
+        /* ---------------- Table Area ---------------- */
+        .table-wrap { overflow-x: auto; margin-top: 12px; }
+        .arbitrator-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+        .arbitrator-table th { padding: 12px 16px; background: #F9FAFB; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600; }
+        .arbitrator-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
+        .arbitrator-table tbody tr:hover { background: #F8FAFC; }
+        .addr-col { font-family: var(--font-mono); }
+
+        /* ---------------- Logs Area ---------------- */
+        .logs-box { display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono); font-size: 12px; }
+        .log-row { display: flex; gap: 16px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px; }
+        .log-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .log-time { color: var(--text-light); white-space: nowrap; }
+        .log-event { color: var(--primary); font-weight: 700; white-space: nowrap; }
+        .log-desc { color: var(--text-main); }
+
+        /* ---------------- Toast ---------------- */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: #1F2937; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s forwards; }
+        .toast-error { background: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Escrow Market
+        </div>
+        <nav class="nav-menu">
+            <a href="#" class="nav-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                总览 Dashboard
+            </a>
+            <a href="#" class="nav-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                交易市场 Marketplace
+            </a>
+            <a href="#" class="nav-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                交易详情 Trade Detail
+            </a>
+            <a href="#" class="nav-item active">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+                仲裁中心 Arbitration
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content Layout -->
+    <div class="main-layout">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-info">
+                <span>网络: <span class="info-badge">Sepolia</span></span>
+                <span>托管合约: <span class="info-badge">0x9b2...4a71</span></span>
+            </div>
+            <div class="tx-status-bar">
+                <div class="tx-indicator">
+                    <div class="dot" id="tx-dot"></div>
+                    <span id="tx-text" style="color: var(--text-muted);">Idle</span>
+                </div>
+                <span class="info-badge" id="wallet-addr">未连接钱包</span>
+                <button class="btn-connect" id="btn-connect" onclick="connectWallet()">连接钱包</button>
+            </div>
+        </header>
+
+        <!-- Main Body -->
+        <main class="content">
+            
+            <!-- Dispute Summary Card -->
+            <div class="card">
+                <div class="dispute-summary">
+                    <div class="summary-main">
+                        <h1>去中心化仲裁治理台</h1>
+                        <p>引入独立博弈的质押仲裁网络，通过多方对独立证据的链上交叉投票解决交易纠纷，保障平台抗审查性与双边公平性。</p>
+                    </div>
+                    <div class="capsule capsule-danger" id="contract-state-capsule">
+                        <div class="capsule-dot"></div>
+                        <span id="contract-state-text">Disputed (仲裁中)</span>
+                    </div>
+                </div>
+                <div class="summary-grid">
+                    <div class="grid-item">
+                        <span class="grid-label">纠纷商品 (#1)</span>
+                        <span class="grid-val">客制化二手机械键盘</span>
+                    </div>
+                    <div class="grid-item">
+                        <span class="grid-label">锁定交易金额 / 纠纷总押金</span>
+                        <span class="grid-val eth">0.50 ETH <span style="font-size:12px; color:var(--text-light);">/ 0.002 ETH</span></span>
+                    </div>
+                    <div class="grid-item">
+                        <span class="grid-label">争议发起方 / 诉求</span>
+                        <span class="grid-val"><span class="capsule capsule-primary" style="padding:1px 6px;">买家</span> 退款结算</span>
+                    </div>
+                    <div class="grid-item">
+                        <span class="grid-label">多数决判定门槛</span>
+                        <span class="grid-val" style="color:var(--warning)">>= 2 / 3 多数赞成</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Three Columns Content -->
+            <div class="three-column-grid">
+                
+                <!-- Left Column: Evidence -->
+                <div class="card">
+                    <div class="section-title">⚖️ 链上存证证据链</div>
+                    
+                    <div class="evidence-box">
+                        <div class="capsule capsule-primary" style="font-size:11px; padding:2px 6px; margin-bottom:6px;">买家举证 (Buyer)</div>
+                        <div class="hash-text">ipfs://QmBuyerEvidenceKeyboardDamage771x9aFv</div>
+                        <div style="font-size:11px; color:var(--text-light); display:flex; justify-content:space-between;">
+                            <span>状态: 已提交加密签名</span>
+                            <span>1天前</span>
+                        </div>
+                    </div>
+
+                    <div class="evidence-box">
+                        <div class="capsule capsule-success" style="font-size:11px; padding:2px 6px; margin-bottom:6px;">卖家抗辩 (Seller)</div>
+                        <div class="hash-text">ipfs://QmSellerDeliveryReceiptExpressValid882yBa</div>
+                        <div style="font-size:11px; color:var(--text-light); display:flex; justify-content:space-between;">
+                            <span>状态: 已提交加密签名</span>
+                            <span>18小时前</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline" style="margin-top:6px;" onclick="showToast('正在调起本地 IPFS 节点网关解密数据流...', 'info')">查看完整多媒体存证</button>
+                </div>
+
+                <!-- Center Column: Voting -->
+                <div class="card voting-stage">
+                    <div class="section-title" style="margin-bottom:8px;">🗳️ 仲裁员治理决策投票</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px; text-align:left;">
+                        当前登录节点: <span class="addr-col" style="font-weight:600;" id="current-voter-node">0xF11...A92</span>
+                    </div>
+
+                    <button class="btn-vote btn-vote-buyer" id="btn-vote-b" onclick="castVote('buyer')">👍 支持买家胜诉 (全额退款)</button>
+                    <button class="btn-vote btn-vote-seller" id="btn-vote-s" onclick="castVote('seller')">🙌 支持卖家胜诉 (正常放款)</button>
+                    
+                    <div class="vote-desc">
+                        <span style="font-weight:600; display:block; margin-bottom:4px; font-size:11px; color:var(--text-main);">🛡️ 智能合约多签规则提示:</span>
+                        • 买家胜诉：托管金将安全返还买家原包钱包。<br>
+                        • 卖家胜诉：解冻托管层，锁定金额直接释放至卖家。<br>
+                        <span style="color:var(--danger); font-weight:600; font-size:11px; display:block; margin-top:4px;">⚠️ 每个被授权质押的仲裁员针对此提案只能签名提交一次。</span>
+                    </div>
+                </div>
+
+                <!-- Right Column: Staking -->
+                <div class="card">
+                    <div class="section-title">🛡️ 独立仲裁员席位管理</div>
+                    
+                    <div class="stake-status">
+                        <div style="display:flex; justify-content:between; width:100%;">
+                            <span style="color:var(--text-muted); flex:1;">要求席位质押保证金:</span>
+                            <span class="font-mono" style="font-weight:700;">0.10 ETH</span>
+                        </div>
+                        <div style="display:flex; justify-content:between; width:100%;">
+                            <span style="color:var(--text-muted); flex:1;">当前节点质押状态:</span>
+                            <span class="capsule capsule-success" style="padding:1px 6px;" id="stake-badge-state">已激活质押</span>
+                        </div>
+                        <div style="display:flex; justify-content:between; width:100%; color:var(--danger); font-weight:600; font-size:12px; margin-top:4px;">
+                            <span>🔒 锁定锁定中：因存在进行中纠纷</span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <button class="btn btn-primary" onclick="handleStake()">追加/质押保证金 (0.1 ETH)</button>
+                        <button class="btn btn-outline" onclick="handleUnstake()">退出仲裁网络并解除质押</button>
+                    </div>
+                    
+                    <div style="margin-top:16px; font-size:12px; color:var(--text-light); text-align:center;">
+                        当前网络总激活仲裁节点数: <span style="color:var(--text-main); font-weight:700;">3</span> 名
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress & Dynamic Result Section -->
+            <div class="card results-grid">
+                <div class="progress-block">
+                    <div class="section-title" style="margin-bottom:0;">📈 多签裁决投票进度追踪</div>
+                    
+                    <!-- Progress Buyer -->
+                    <div class="progress-wrapper">
+                        <div class="progress-labels">
+                            <span style="color:var(--primary)">支持买家退款诉求</span>
+                            <span id="buyer-vote-count">2 / 3 票 (66.6%)</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill fill-buyer" id="buyer-progress-fill" style="width: 66.6%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Seller -->
+                    <div class="progress-wrapper">
+                        <div class="progress-labels">
+                            <span style="color:var(--success)">支持卖家全款发放</span>
+                            <span id="seller-vote-count">1 / 3 票 (33.3%)</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill fill-seller" id="seller-progress-fill" style="width: 33.3%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verdict Summary Box -->
+                <div class="verdict-card" id="verdict-card-box" style="border-left: 5px solid var(--warning);">
+                    <div class="verdict-title">智能合约当前裁决输出</div>
+                    <div class="verdict-value" id="verdict-text-val" style="color:var(--warning)">⚖️ 仲裁公开计票中...</div>
+                </div>
+            </div>
+
+            <!-- Arbitrator Detail Table -->
+            <div class="card">
+                <div class="section-title">👥 全网有权签名仲裁员明细</div>
+                <div class="table-wrap">
+                    <table class="arbitrator-table">
+                        <thead>
+                            <tr>
+                                <th>仲裁节点公钥地址</th>
+                                <th>保证金质押状态</th>
+                                <th>本次选择</th>
+                                <th>合流状态</th>
+                                <th>分红预估收益 (Gas Reimbursement)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="arbitrator-tbody">
+                            <tr>
+                                <td class="addr-col">0xF11c34a9291122...a891</td>
+                                <td><span class="capsule capsule-success">已质押 (0.1 ETH)</span></td>
+                                <td id="voter-1-choice"><span class="capsule capsule-primary">买家退款</span></td>
+                                <td id="voter-1-match"><span class="capsule capsule-neutral">待计票</span></td>
+                                <td class="font-mono" id="voter-1-reward">0.0000 ETH</td>
+                            </tr>
+                            <tr>
+                                <td class="addr-col">0xF22d91bc712214...91fa</td>
+                                <td><span class="capsule capsule-success">已质押 (0.1 ETH)</span></td>
+                                <td><span class="capsule capsule-primary">买家退款</span></td>
+                                <td id="voter-2-match"><span class="capsule capsule-neutral">待计票</span></td>
+                                <td class="font-mono" id="voter-2-reward">0.0000 ETH</td>
+                            </tr>
+                            <tr>
+                                <td class="addr-col">0xF33a1829bc121A...c182</td>
+                                <td><span class="capsule capsule-success">已质押 (0.1 ETH)</span></td>
+                                <td><span class="capsule capsule-success">卖家放款</span></td>
+                                <td id="voter-3-match"><span class="capsule capsule-neutral">待计票</span></td>
+                                <td class="font-mono" id="voter-3-reward">0.0000 ETH</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Arbitration Logs -->
+            <div class="card">
+                <div class="section-title">📑 纠纷治理链上历史快照 (Logs)</div>
+                <div class="logs-box">
+                    <div class="log-row">
+                        <span class="log-time">[14:32:11]</span>
+                        <span class="log-event">VoteSubmitted</span>
+                        <span class="log-desc">仲裁节点 0xF33... 提交签名，选择投给 [支持卖家放款]。事务哈希: 0x9b32...fa11</span>
+                    </div>
+                    <div class="log-row">
+                        <span class="log-time">[11:15:40]</span>
+                        <span class="log-event">VoteSubmitted</span>
+                        <span class="log-desc">仲裁节点 0xF22... 提交签名，选择投给 [支持买家退款]。事务哈希: 0xbc32...0192</span>
+                    </div>
+                    <div class="log-row">
+                        <span class="log-time">[昨日 18:22]</span>
+                        <span class="log-event">DisputeDepositPaid</span>
+                        <span class="log-desc">买卖双方完成反制博弈，双边多签纠纷验证保证金（0.001 ETH × 2）全部锁定到合约层。</span>
+                    </div>
+                    <div class="log-row">
+                        <span class="log-time">[前日 09:12]</span>
+                        <span class="log-event">DisputeOpened</span>
+                        <span class="log-desc">订单 #1 出现逆向分歧，买家上传解密存证并触发智能合约 openDispute() 方法进入公诉区。</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // --- 核心底层状态模型 ---
+        let isWalletConnected = false;
+        let isFinalized = false;
+        
+        // 票数计数
+        let buyerVotes = 2;
+        let sellerVotes = 1;
+        const totalVoters = 3;
+
+        // --- DOM 节点缓存 ---
+        const txDot = document.getElementById('tx-dot');
+        const txText = document.getElementById('tx-text');
+        const walletAddrText = document.getElementById('wallet-addr');
+        const connectBtn = document.getElementById('btn-connect');
+        const currentVoterNode = document.getElementById('current-voter-node');
+
+        // 计票节点
+        const buyerVoteCount = document.getElementById('buyer-vote-count');
+        const sellerVoteCount = document.getElementById('seller-vote-count');
+        const buyerProgressFill = document.getElementById('buyer-progress-fill');
+        const sellerProgressFill = document.getElementById('seller-progress-fill');
+        
+        // 判定输出节点
+        const verdictCardBox = document.getElementById('verdict-card-box');
+        const verdictTextVal = document.getElementById('verdict-text-val');
+        const contractStateCapsule = document.getElementById('contract-state-capsule');
+        const contractStateText = document.getElementById('contract-state-text');
+
+        // --- Toast 消息组件封装 ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if (type === 'error') toast.classList.add('toast-error');
+            if (type === 'success') toast.style.backgroundColor = '#16A34A';
+            
+            toast.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- 链上延迟反馈模拟器 ---
+        function runTxSimulation(onSuccess, message) {
+            txDot.className = 'dot pending';
+            txText.innerText = 'Pending';
+            txText.style.color = 'var(--warning)';
+
+            setTimeout(() => {
+                onSuccess();
+                txDot.className = 'dot success';
+                txText.innerText = 'Success';
+                txText.style.color = 'var(--success)';
+                showToast(message, 'success');
+
+                setTimeout(() => {
+                    txDot.className = 'dot';
+                    txText.innerText = 'Idle';
+                    txText.style.color = 'var(--text-muted)';
+                }, 1500);
+            }, 700);
+        }
+
+        // --- 钱包连接处理 ---
+        function connectWallet() {
+            if (isWalletConnected) return;
+            connectBtn.innerText = '连接中...';
+            setTimeout(() => {
+                isWalletConnected = true;
+                walletAddrText.innerText = '0x7a3...91f2';
+                walletAddrText.style.color = 'var(--success)';
+                walletAddrText.style.borderColor = 'var(--success)';
+                currentVoterNode.innerText = '0x7a3...91f2 (本地节点)';
+                connectBtn.innerText = '已连接';
+                showToast('已绑定治理仲裁公钥地址：0x7a3...91f2', 'success');
+            }, 400);
+        }
+
+        // --- 核心业务规则：质押和解绑处理 ---
+        function handleStake() {
+            if (!isWalletConnected) return showToast('演示前请先通过右上角【连接钱包】授权节点。', 'error');
+            runTxSimulation(() => {
+                document.getElementById('stake-badge-state').innerText = '已质押 (0.2 ETH)';
+                showToast('成功追缴追加 0.1 ETH 保证金资产。', 'success');
+            }, '保证金质押区块已成功打包并存证。');
+        }
+
+        function handleUnstake() {
+            if (!isWalletConnected) return showToast('演示前请先通过右上角【连接钱包】授权节点。', 'error');
+            
+            // 模拟链上智能合约的 require(activeDisputes[msg.sender] == 0) 断言冲突抛错
+            txDot.className = 'dot pending';
+            txText.innerText = 'Pending';
+            txText.style.color = 'var(--warning)';
+
+            setTimeout(() => {
+                txDot.className = 'dot';
+                txText.className = 'dot'; // Failed 样式变体
+                txText.innerText = 'Failed';
+                txText.style.color = 'var(--danger)';
+                
+                showToast('智能合约异常终止: 存在进行中的纠纷多签，不允许退出网络！', 'error');
+            }, 500);
+        }
+
+        // --- 核心业务规则：仲裁多签计票动态算力引擎 ---
+        function castVote(target) {
+            if (!isWalletConnected) return showToast('演示前请先通过右上角【连接钱包】授权节点。', 'error');
+            if (isFinalized) return showToast('该笔订单仲裁已最终裁决闭环，状态机已锁定。', 'error');
+
+            runTxSimulation(() => {
+                // 执行选票状态跃迁
+                if (target === 'buyer') {
+                    buyerVotes++;
+                } else {
+                    sellerVotes++;
+                }
+
+                // 计算全局最新共识权重比例
+                const totalCast = buyerVotes + sellerVotes;
+                const buyerPct = ((buyerVotes / totalCast) * 100).toFixed(1);
+                const sellerPct = ((sellerVotes / totalCast) * 100).toFixed(1);
+
+                buyerVoteCount.innerText = `${buyerVotes} / ${totalCast} 票 (${buyerPct}%)`;
+                sellerVoteCount.innerText = `${sellerVotes} / ${totalCast} 票 (${sellerPct}%)`;
+                buyerProgressFill.style.width = `${buyerPct}%`;
+                sellerProgressFill.style.width = `${sellerPct}%`;
+
+                // 一旦计票落入多数阈值范围区间 (2/3 多数决断，此处总池扩容为4票后判断)
+                if (buyerVotes >= 2) {
+                    executeArbitrationFinalized('buyer');
+                } else if (sellerVotes >= 2) {
+                    executeArbitrationFinalized('seller');
+                }
+            }, `投票签名打包确认完成！Event: VoteSubmitted`);
+        }
+
+        // 最终多签断言结算逻辑
+        function executeArbitrationFinalized(winner) {
+            isFinalized = true;
+            
+            // 全局状态机样式更改为结束态 Inactive
+            contractStateCapsule.className = 'capsule capsule-neutral';
+            contractStateText.innerText = 'Inactive (已结束)';
+
+            // 裁决通知卡颜色翻转高亮
+            if (winner === 'buyer') {
+                verdictCardBox.style.borderLeft = '5px solid var(--primary)';
+                verdictCardBox.style.backgroundColor = 'var(--primary-light)';
+                verdictTextVal.innerText = '🎉 买家胜诉：全额退款已释放';
+                verdictTextVal.style.color = 'var(--primary)';
+            } else {
+                verdictCardBox.style.borderLeft = '5px solid var(--success)';
+                verdictCardBox.style.backgroundColor = 'var(--success-light)';
+                verdictTextVal.innerText = '🎉 卖家胜诉：托管资金已解冻发放';
+                verdictTextVal.style.color = 'var(--success)';
+            }
+
+            // 联动重绘全网明细表格，展现“结算红利及分配分红”
+            document.getElementById('voter-1-match').innerHTML = `<span class="capsule capsule-success">多数票共识</span>`;
+            document.getElementById('voter-2-match').innerHTML = `<span class="capsule capsule-success">多数票共识</span>`;
+            document.getElementById('voter-3-match').innerHTML = `<span class="capsule capsule-danger">少数票退回</span>`;
+            
+            document.getElementById('voter-1-reward').innerText = '0.0005 ETH';
+            document.getElementById('voter-2-reward').innerText = '0.0005 ETH';
+            document.getElementById('voter-3-reward').innerText = '0.0000 ETH';
+
+            // 注入日志节点
+            const logBox = document.querySelector('.logs-box');
+            const newLog = document.createElement('div');
+            newLog.className = 'log-row';
+            newLog.style.backgroundColor = winner === 'buyer' ? 'var(--primary-light)' : 'var(--success-light)';
+            newLog.innerHTML = `
+                <span class="log-time">[刚刚]</span>
+                <span class="log-event" style="color:var(--text-main);">ArbitrationFinalized</span>
+                <span class="log-desc" style="font-weight:600;">2/3 多数多数票共识已达成。合约触发最终放款结算清算。少数派质押利息被扣除并奖励给多数派节点。</span>
+            `;
+            logBox.prepend(newLog);
+
+            // 禁用投票按钮
+            document.getElementById('btn-vote-b').disabled = true;
+            document.getElementById('btn-vote-s').disabled = true;
+        }
+    </script>
+</body>
+</html>

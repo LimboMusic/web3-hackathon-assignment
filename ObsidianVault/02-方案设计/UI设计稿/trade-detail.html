@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易详情 Trade Detail - Escrow Market</title>
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --success: #16A34A;
+            --success-hover: #15803D;
+            --warning: #F59E0B;
+            --warning-hover: #B45309;
+            --danger: #DC2626;
+            --danger-hover: #B91C1C;
+            --bg-main: #F6F8FB;
+            --bg-card: #FFFFFF;
+            --border-color: #E5E7EB;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --text-light: #9CA3AF;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ---------------- Sidebar ---------------- */
+        .sidebar {
+            width: 240px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+        .brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--primary);
+        }
+        .nav-menu { padding: 20px 12px; display: flex; flex-direction: column; gap: 8px; }
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { background: #EFF6FF; color: var(--primary); }
+        .nav-item.active { background: var(--primary); color: #fff; }
+
+        /* ---------------- Main Layout ---------------- */
+        .main-layout { margin-left: 240px; flex: 1; display: flex; flex-direction: column; }
+        
+        .top-bar {
+            height: 70px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky; top: 0; z-index: 90;
+        }
+        .top-info { display: flex; gap: 24px; font-size: 13px; color: var(--text-muted); }
+        .info-badge { background: #F3F4F6; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-main); font-family: var(--font-mono); }
+        
+        .tx-status-bar { display: flex; align-items: center; gap: 16px; }
+        .tx-indicator { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; background: #F3F4F6; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-light); }
+        .dot.pending { background: var(--warning); animation: pulse 1s infinite; }
+        .dot.success { background: var(--success); }
+        @keyframes pulse { 0% { opacity: 0.5; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.5; transform: scale(0.8); } }
+
+        .btn-connect {
+            background: var(--primary); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .btn-connect:hover { background: var(--primary-hover); }
+        .btn-connect:disabled { background: #E5E7EB; color: #9CA3AF; cursor: not-allowed; }
+
+        /* ---------------- Content & Cards ---------------- */
+        .content { padding: 32px; max-width: 1500px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 24px; }
+        
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        /* ---------------- Summary ---------------- */
+        .summary-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .summary-title { font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+        .summary-subtitle { font-size: 14px; color: var(--text-muted); }
+        
+        .status-capsule { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+        .st-created { background: #F3F4F6; color: #4B5563; } .st-created .s-dot { background: #6B7280; }
+        .st-locked { background: #EFF6FF; color: #2563EB; } .st-locked .s-dot { background: #2563EB; }
+        .st-delivered { background: #DCFCE7; color: #16A34A; } .st-delivered .s-dot { background: #16A34A; }
+        .st-pending-dep { background: #FEF3C7; color: #D97706; } .st-pending-dep .s-dot { background: #D97706; }
+        .st-disputed { background: #FEE2E2; color: #DC2626; } .st-disputed .s-dot { background: #DC2626; }
+        .st-inactive { background: #E5E7EB; color: #374151; } .st-inactive .s-dot { background: #4B5563; }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 24px; }
+        .s-box { display: flex; flex-direction: column; gap: 6px; }
+        .s-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .s-val { font-size: 16px; font-weight: 600; color: var(--text-main); font-family: var(--font-mono); }
+        .s-val.eth { color: var(--primary); font-size: 20px; font-variant-numeric: tabular-nums; }
+
+        /* ---------------- 3-Column Layout ---------------- */
+        .three-col-grid { display: grid; grid-template-columns: 320px 1fr 320px; gap: 24px; align-items: start; }
+        
+        /* ---------------- Role Panels ---------------- */
+        .panel { display: flex; flex-direction: column; gap: 20px; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .panel-title { font-size: 16px; font-weight: 700; }
+        .role-tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
+        .role-seller { background: #F3E8FF; color: #7E22CE; }
+        .role-buyer { background: #E0F2FE; color: #0369A1; }
+
+        .data-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .d-label { color: var(--text-muted); }
+        .d-val { font-family: var(--font-mono); font-weight: 600; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .input-box { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; font-size: 13px; font-family: var(--font-mono); width: 100%; outline: none; }
+        .input-box:focus { border-color: var(--primary); }
+
+        .action-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+        .btn {
+            width: 100%; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 6px;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline { background: #fff; border-color: var(--border-color); color: var(--text-main); }
+        .btn-outline:hover:not(:disabled) { background: #F9FAFB; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover:not(:disabled) { background: var(--success-hover); }
+        .btn-warning { background: var(--warning); color: #fff; }
+        .btn-warning:hover:not(:disabled) { background: var(--warning-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover:not(:disabled) { background: var(--danger-hover); }
+
+        /* ---------------- Center Panel ---------------- */
+        .center-stage { display: flex; flex-direction: column; gap: 24px; }
+        
+        /* Flow & Timeline */
+        .visual-box { background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 32px; align-items: center; }
+        
+        .timeline { display: flex; width: 100%; justify-content: space-between; position: relative; }
+        .tl-line { position: absolute; top: 14px; left: 10%; right: 10%; height: 2px; background: #E5E7EB; z-index: 1; }
+        .tl-step { display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2; width: 20%; }
+        .tl-dot { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2px solid #E5E7EB; display: flex; justify-content: center; align-items: center; font-size: 12px; font-weight: bold; color: var(--text-muted); transition: 0.3s; }
+        .tl-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-align: center; }
+        
+        .tl-step.active .tl-dot { border-color: var(--primary); background: var(--primary); color: #fff; box-shadow: 0 0 0 4px var(--primary-light); }
+        .tl-step.active .tl-label { color: var(--primary); }
+        .tl-step.done .tl-dot { border-color: var(--success); background: var(--success); color: #fff; }
+        .tl-step.done .tl-label { color: var(--text-main); }
+        .tl-step.error .tl-dot { border-color: var(--danger); background: var(--danger); color: #fff; }
+
+        /* Interaction Hint Card */
+        .hint-card { width: 100%; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: 0.3s; }
+        .hint-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .hint-text { flex: 1; font-size: 13px; font-weight: 500; }
+        
+        .hint-idle { border-left: 4px solid var(--text-light); } .hint-idle .hint-icon { background: #F3F4F6; color: var(--text-muted); }
+        .hint-pending { border-left: 4px solid var(--warning); background: #FFFBEB; } .hint-pending .hint-icon { background: #FEF3C7; color: var(--warning); animation: spin 1s linear infinite; }
+        .hint-success { border-left: 4px solid var(--success); background: #F0FDF4; } .hint-success .hint-icon { background: #DCFCE7; color: var(--success); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Console Logs */
+        .console-wrap { background: #111827; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+        .console-header { background: #1F2937; padding: 10px 16px; font-size: 12px; font-weight: 600; color: #9CA3AF; display: flex; justify-content: space-between; border-bottom: 1px solid #374151; }
+        .console-body { padding: 16px; height: 220px; overflow-y: auto; font-family: var(--font-mono); font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .log-entry { color: #D1D5DB; line-height: 1.4; display: flex; gap: 12px; }
+        .log-time { color: #6B7280; white-space: nowrap; }
+        .log-tag { color: #34D399; font-weight: bold; }
+        .log-tag.warn { color: #FBBF24; }
+        .log-tag.err { color: #F87171; }
+
+        /* Toast */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: #1F2937; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Escrow Market
+        </div>
+        <nav class="nav-menu">
+            <a href="#" class="nav-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                总览 Dashboard
+            </a>
+            <a href="#" class="nav-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                交易市场 Marketplace
+            </a>
+            <a href="#" class="nav-item active">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                交易详情 Trade Detail
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main -->
+    <div class="main-layout">
+        <!-- Topbar -->
+        <header class="top-bar">
+            <div class="top-info">
+                <span>网络: <span class="info-badge">Sepolia</span></span>
+                <span>托管合约: <span class="info-badge">0x9b2...4a71</span></span>
+            </div>
+            <div class="tx-status-bar">
+                <div class="tx-indicator" id="global-tx">
+                    <div class="dot idle" id="global-tx-dot"></div>
+                    <span id="global-tx-text">Idle</span>
+                </div>
+                <span class="info-badge" id="wallet-addr">未连接钱包</span>
+                <button class="btn-connect" id="btn-connect" onclick="connectWallet()">连接 Web3 钱包</button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="content">
+            <!-- Top Summary Card -->
+            <div class="card">
+                <div class="summary-header">
+                    <div>
+                        <h1 class="summary-title">二手机械键盘 (Cherry红轴) <span style="color:var(--text-light); font-size: 16px;">#1</span></h1>
+                        <p class="summary-subtitle">买卖双方通过智能合约完成资金托管与交付验证</p>
+                    </div>
+                    <div id="main-badge" class="status-capsule st-created">
+                        <div class="s-dot"></div><span id="main-badge-text">Created (已创建)</span>
+                    </div>
+                </div>
+                <div class="summary-grid">
+                    <div class="s-box">
+                        <span class="s-label">商品价格 / 托管金额</span>
+                        <span class="s-val eth" id="top-escrow">0.00 ETH</span>
+                    </div>
+                    <div class="s-box">
+                        <span class="s-label">卖家地址 (Seller)</span>
+                        <span class="s-val">0xA12F...89FC</span>
+                    </div>
+                    <div class="s-box">
+                        <span class="s-label">买家地址 (Buyer)</span>
+                        <span class="s-val" id="top-buyer">--</span>
+                    </div>
+                    <div class="s-box">
+                        <span class="s-label">智能合约状态</span>
+                        <span class="s-val" style="color:var(--primary)" id="top-status">Created</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Three Columns -->
+            <div class="three-col-grid">
+                
+                <!-- Left: Seller Panel -->
+                <div class="card panel">
+                    <div class="panel-header">
+                        <span class="panel-title">卖家操作面板</span>
+                        <span class="role-tag role-seller">Seller</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="d-label">卖家地址</span>
+                        <span class="d-val">0xA12...89F</span>
+                    </div>
+                    <div class="data-row" style="background: #F8FAFC; padding: 12px; border-radius: 8px;">
+                        <span class="d-label" style="color:var(--text-main); font-weight:600;">可提现余额</span>
+                        <span class="d-val" style="color:var(--success); font-size:16px;" id="seller-balance">0.00 ETH</span>
+                    </div>
+                    <div class="input-group">
+                        <label>修改商品价格 (ETH)</label>
+                        <input type="text" class="input-box" value="0.5" id="seller-price-input">
+                    </div>
+                    
+                    <div class="action-list" id="seller-actions">
+                        <button class="btn btn-outline" id="btn-modify" onclick="handleAction('modifyPrice', '修改价格成功')">修改价格</button>
+                        <button class="btn btn-danger" id="btn-delist" onclick="handleAction('delist', '已下架商品')">下架商品</button>
+                        <button class="btn btn-primary" id="btn-deliver" onclick="handleAction('markDelivered', '已标记交付，等待买家确认')">📦 标记已交付 (Deliver)</button>
+                        <button class="btn btn-warning" id="btn-agree-refund" onclick="handleAction('agreeRefund', '已同意退款，资金退还买家')">同意退款</button>
+                        <button class="btn btn-outline" id="btn-timeout" onclick="handleAction('timeoutPayout', '已触发超时放款')">⏳ 超时自动放款</button>
+                        <button class="btn btn-success" id="btn-seller-withdraw" onclick="handleAction('sellerWithdraw', '提现成功')">💰 提取余额 (Withdraw)</button>
+                    </div>
+                </div>
+
+                <!-- Center: Stage & Flow -->
+                <div class="center-stage">
+                    
+                    <!-- Flow & Timeline Card -->
+                    <div class="visual-box">
+                        <h3 style="font-size: 14px; color: var(--text-muted); margin-bottom: -10px;">状态机与资金流向</h3>
+                        
+                        <!-- Timeline -->
+                        <div class="timeline">
+                            <div class="tl-line"></div>
+                            <div class="tl-step active" id="step-created">
+                                <div class="tl-dot">1</div><div class="tl-label">Created<br>创建</div>
+                            </div>
+                            <div class="tl-step" id="step-locked">
+                                <div class="tl-dot">2</div><div class="tl-label">Locked<br>付款托管</div>
+                            </div>
+                            <div class="tl-step" id="step-delivered">
+                                <div class="tl-dot">3</div><div class="tl-label">Delivered<br>已发货</div>
+                            </div>
+                            <div class="tl-step" id="step-disputed">
+                                <div class="tl-dot">4</div><div class="tl-label">Disputed<br>纠纷仲裁</div>
+                            </div>
+                            <div class="tl-step" id="step-inactive">
+                                <div class="tl-dot">5</div><div class="tl-label">Inactive<br>结算结束</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interaction Hint -->
+                    <div class="hint-card hint-idle" id="tx-hint-card">
+                        <div class="hint-icon" id="tx-hint-icon">✓</div>
+                        <div class="hint-text" id="tx-hint-text">等待操作... 请在左右面板执行合约方法。</div>
+                    </div>
+
+                    <!-- Console Logs -->
+                    <div class="console-wrap">
+                        <div class="console-header">
+                            <span>🔗 链上事件监听 (Events)</span>
+                            <span style="color:#6B7280; font-weight:normal;">Live</span>
+                        </div>
+                        <div class="console-body" id="console-logs">
+                            <!-- Logs will be appended here -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right: Buyer Panel -->
+                <div class="card panel">
+                    <div class="panel-header">
+                        <span class="panel-title">买家操作面板</span>
+                        <span class="role-tag role-buyer">Buyer</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="d-label">买家地址</span>
+                        <span class="d-val">0xB45...12C</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="d-label">商品标价</span>
+                        <span class="d-val" style="color:var(--primary)">0.50 ETH</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="d-label">需补交纠纷押金</span>
+                        <span class="d-val">0.001 ETH</span>
+                    </div>
+                    <div class="data-row" style="background: #F8FAFC; padding: 12px; border-radius: 8px;">
+                        <span class="d-label" style="color:var(--text-main); font-weight:600;">可提现余额</span>
+                        <span class="d-val" style="color:var(--success); font-size:16px;" id="buyer-balance">0.00 ETH</span>
+                    </div>
+                    <div class="input-group">
+                        <label>证据哈希 / URI (发起纠纷用)</label>
+                        <input type="text" class="input-box" placeholder="ipfs://Qm...">
+                    </div>
+                    
+                    <div class="action-list" id="buyer-actions">
+                        <button class="btn btn-primary" id="btn-buy" onclick="handleAction('buy', '支付成功，资金已锁定')">💳 支付购买并托管 (0.5 ETH)</button>
+                        <button class="btn btn-success" id="btn-confirm" onclick="handleAction('confirm', '已确认收货，向卖家放款')">✅ 确认收货 (Confirm)</button>
+                        <button class="btn btn-outline" id="btn-request-refund" onclick="handleAction('requestRefund', '已发起退款申请，等待卖家响应')">↩️ 申请退款</button>
+                        <button class="btn btn-danger" id="btn-dispute" onclick="handleAction('openDispute', '已申请纠纷介入，等待押金')">⚖️ 发起仲裁纠纷</button>
+                        <button class="btn btn-warning" id="btn-pay-deposit" onclick="handleAction('payDeposit', '已补交押金，进入仲裁投票环节')">补交纠纷押金 (0.001 ETH)</button>
+                        <button class="btn btn-outline" id="btn-buyer-withdraw" onclick="handleAction('buyerWithdraw', '提现成功')">💰 提取余额 (Withdraw)</button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // --- State Management ---
+        let state = {
+            walletConnected: false,
+            contractState: 'Created', // Created, Locked, Delivered, DisputeDepositPending, Disputed, Inactive
+            escrowAmount: 0.00,
+            sellerBalance: 0.00,
+            buyerBalance: 0.00,
+            refundRequested: false,
+            buyerAddr: '--'
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            btnConnect: document.getElementById('btn-connect'),
+            walletAddr: document.getElementById('wallet-addr'),
+            globalTxDot: document.getElementById('global-tx-dot'),
+            globalTxText: document.getElementById('global-tx-text'),
+            
+            mainBadge: document.getElementById('main-badge'),
+            mainBadgeText: document.getElementById('main-badge-text'),
+            topEscrow: document.getElementById('top-escrow'),
+            topBuyer: document.getElementById('top-buyer'),
+            topStatus: document.getElementById('top-status'),
+            
+            sellerBalance: document.getElementById('seller-balance'),
+            buyerBalance: document.getElementById('buyer-balance'),
+            
+            hintCard: document.getElementById('tx-hint-card'),
+            hintIcon: document.getElementById('tx-hint-icon'),
+            hintText: document.getElementById('tx-hint-text'),
+            consoleLogs: document.getElementById('console-logs'),
+
+            // Buttons Seller
+            bModify: document.getElementById('btn-modify'),
+            bDelist: document.getElementById('btn-delist'),
+            bDeliver: document.getElementById('btn-deliver'),
+            bAgreeRefund: document.getElementById('btn-agree-refund'),
+            bTimeout: document.getElementById('btn-timeout'),
+            bSellerWd: document.getElementById('btn-seller-withdraw'),
+
+            // Buttons Buyer
+            bBuy: document.getElementById('btn-buy'),
+            bConfirm: document.getElementById('btn-confirm'),
+            bReqRefund: document.getElementById('btn-request-refund'),
+            bDispute: document.getElementById('btn-dispute'),
+            bPayDep: document.getElementById('btn-pay-deposit'),
+            bBuyerWd: document.getElementById('btn-buyer-withdraw'),
+        };
+
+        // --- Helper: Format Time ---
+        function getTimeString() {
+            const now = new Date();
+            return `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
+        }
+
+        // --- Logger ---
+        function addLog(event, desc, isWarn = false, isErr = false) {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            let tagClass = 'log-tag';
+            if (isWarn) tagClass += ' warn';
+            if (isErr) tagClass += ' err';
+            
+            div.innerHTML = `
+                <span class="log-time">${getTimeString()}</span>
+                <span><span class="${tagClass}">Event: ${event}</span> - ${desc}</span>
+            `;
+            els.consoleLogs.prepend(div);
+        }
+
+        // --- UI Updater ---
+        function updateUI() {
+            // Update Balances & Texts
+            els.topEscrow.innerText = state.escrowAmount.toFixed(2) + ' ETH';
+            els.topBuyer.innerText = state.buyerAddr;
+            els.topStatus.innerText = state.contractState;
+            els.sellerBalance.innerText = state.sellerBalance.toFixed(2) + ' ETH';
+            els.buyerBalance.innerText = state.buyerBalance.toFixed(2) + ' ETH';
+
+            if (state.refundRequested) els.topStatus.innerText += ' (RefundReq)';
+
+            // Update Badge
+            els.mainBadge.className = 'status-capsule';
+            let bText = state.contractState;
+            let bClass = '';
+            switch(state.contractState) {
+                case 'Created': bClass = 'st-created'; bText = 'Created (已创建)'; break;
+                case 'Locked': bClass = 'st-locked'; bText = 'Locked (已托管)'; break;
+                case 'Delivered': bClass = 'st-delivered'; bText = 'Delivered (已发货)'; break;
+                case 'DisputeDepositPending': bClass = 'st-pending-dep'; bText = 'Wait Deposit (等押金)'; break;
+                case 'Disputed': bClass = 'st-disputed'; bText = 'Disputed (仲裁中)'; break;
+                case 'Inactive': bClass = 'st-inactive'; bText = 'Inactive (已结束)'; break;
+            }
+            els.mainBadge.classList.add(bClass);
+            els.mainBadgeText.innerText = bText;
+
+            // Update Timeline
+            const steps = ['created', 'locked', 'delivered', 'disputed', 'inactive'];
+            let activeFound = false;
+            
+            // Map contract state to timeline visually
+            let currentTlStep = state.contractState.toLowerCase();
+            if (currentTlStep === 'disputedepositpending') currentTlStep = 'disputed';
+            
+            steps.forEach(s => {
+                const stepEl = document.getElementById(`step-${s}`);
+                stepEl.className = 'tl-step';
+                
+                if (s === currentTlStep) {
+                    stepEl.classList.add('active');
+                    activeFound = true;
+                } else if (!activeFound) {
+                    stepEl.classList.add('done'); // Previous steps
+                }
+            });
+
+            // Special timeline color overrides
+            if (state.contractState === 'Disputed') document.getElementById('step-disputed').classList.add('error');
+
+            // --- Button Enabler/Disabler Logic ---
+            const conn = state.walletConnected;
+            const cs = state.contractState;
+            const ref = state.refundRequested;
+
+            // Seller
+            els.bModify.disabled = !(conn && cs === 'Created');
+            els.bDelist.disabled = !(conn && cs === 'Created');
+            els.bDeliver.disabled = !(conn && cs === 'Locked');
+            els.bAgreeRefund.disabled = !(conn && (cs === 'Locked' || cs === 'Delivered'));
+            els.bTimeout.disabled = !(conn && cs === 'Delivered' && !ref);
+            els.bSellerWd.disabled = !(conn && state.sellerBalance > 0);
+
+            // Buyer
+            els.bBuy.disabled = !(conn && cs === 'Created');
+            els.bConfirm.disabled = !(conn && cs === 'Delivered' && !ref);
+            els.bReqRefund.disabled = !(conn && (cs === 'Locked' || cs === 'Delivered') && !ref);
+            els.bDispute.disabled = !(conn && (cs === 'Locked' || cs === 'Delivered'));
+            els.bPayDep.disabled = !(conn && cs === 'DisputeDepositPending');
+            els.bBuyerWd.disabled = !(conn && state.buyerBalance > 0);
+        }
+
+        // --- Tx Simulator ---
+        function setHint(status, msg) {
+            els.hintCard.className = `hint-card hint-${status}`;
+            els.hintText.innerText = msg;
+            if (status === 'idle') els.hintIcon.innerText = '✓';
+            if (status === 'pending') els.hintIcon.innerText = '↻';
+            if (status === 'success') els.hintIcon.innerText = '✅';
+            
+            els.globalTxDot.className = `dot ${status}`;
+            els.globalTxText.innerText = status.charAt(0).toUpperCase() + status.slice(1);
+            if (status === 'pending') els.globalTxText.style.color = 'var(--warning)';
+            else if (status === 'success') els.globalTxText.style.color = 'var(--success)';
+            else els.globalTxText.style.color = 'var(--text-main)';
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = msg;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        }
+
+        function simulateTx(callback, successMsg) {
+            if (!state.walletConnected) return showToast("请先连接钱包");
+            
+            // Disable all inputs temporally
+            document.querySelectorAll('.btn').forEach(b => b.style.pointerEvents = 'none');
+            
+            setHint('pending', '交易已广播，等待链上区块确认 (Pending)...');
+            
+            setTimeout(() => {
+                callback();
+                updateUI();
+                setHint('success', '交易确认成功！(Success) ' + successMsg);
+                showToast(successMsg);
+                
+                document.querySelectorAll('.btn').forEach(b => b.style.pointerEvents = 'auto');
+                
+                setTimeout(() => { setHint('idle', '等待下一步操作...'); }, 2500);
+            }, 600);
+        }
+
+        // --- Actions ---
+        function connectWallet() {
+            els.btnConnect.innerText = "连接中...";
+            els.btnConnect.disabled = true;
+            setTimeout(() => {
+                state.walletConnected = true;
+                els.walletAddr.innerText = "0x7a3...91f2";
+                els.walletAddr.style.color = "var(--primary)";
+                els.walletAddr.style.borderColor = "var(--primary)";
+                els.btnConnect.innerText = "已连接";
+                showToast("钱包已连接");
+                updateUI();
+                addLog('AppInit', 'Contract ABI loaded. Syncing events...');
+            }, 500);
+        }
+
+        function handleAction(action, msg) {
+            simulateTx(() => {
+                switch(action) {
+                    case 'buy':
+                        state.contractState = 'Locked';
+                        state.escrowAmount = 0.50;
+                        state.buyerAddr = '0xB45...12C';
+                        addLog('ItemPurchased', '0.50 ETH locked in escrow by buyer.');
+                        break;
+                    case 'markDelivered':
+                        state.contractState = 'Delivered';
+                        addLog('ItemDelivered', 'Seller marked item as shipped/delivered.');
+                        break;
+                    case 'confirm':
+                        state.contractState = 'Inactive';
+                        state.sellerBalance += state.escrowAmount;
+                        state.escrowAmount = 0;
+                        addLog('TradeFinalized', 'Buyer confirmed receipt. Funds released to seller.', false, false);
+                        break;
+                    case 'requestRefund':
+                        state.refundRequested = true;
+                        addLog('RefundRequested', 'Buyer requested a refund. Waiting for seller response.', true);
+                        break;
+                    case 'agreeRefund':
+                        state.contractState = 'Inactive';
+                        state.buyerBalance += state.escrowAmount;
+                        state.escrowAmount = 0;
+                        addLog('TradeFinalized', 'Seller agreed to refund. Funds returned to buyer.');
+                        break;
+                    case 'openDispute':
+                        state.contractState = 'DisputeDepositPending';
+                        addLog('DisputeOpened', 'Buyer initiated arbitration dispute.', false, true);
+                        break;
+                    case 'payDeposit':
+                        state.contractState = 'Disputed';
+                        addLog('DisputeDepositPaid', '0.001 ETH dispute deposit secured. Voting starts.');
+                        break;
+                    case 'timeoutPayout':
+                        state.contractState = 'Inactive';
+                        state.sellerBalance += state.escrowAmount;
+                        state.escrowAmount = 0;
+                        addLog('TradeFinalized', 'Confirmation timeout. Funds auto-released to seller.');
+                        break;
+                    case 'modifyPrice':
+                        addLog('PriceUpdated', 'Seller modified item price.', true);
+                        break;
+                    case 'delist':
+                        state.contractState = 'Inactive';
+                        addLog('ItemDelisted', 'Seller delisted the item.');
+                        break;
+                    case 'sellerWithdraw':
+                        state.sellerBalance = 0;
+                        addLog('Withdrawal', 'Seller withdrew funds from contract balance.');
+                        break;
+                    case 'buyerWithdraw':
+                        state.buyerBalance = 0;
+                        addLog('Withdrawal', 'Buyer withdrew funds from contract balance.');
+                        break;
+                }
+            }, msg);
+        }
+
+        // Init
+        updateUI();
+
+    </script>
+</body>
+</html>

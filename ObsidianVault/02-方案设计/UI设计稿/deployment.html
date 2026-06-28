@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sepolia 部署与课堂演示 - Escrow Market</title>
+    <style>
+        /* ================= 基础重置与变量 ================= */
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --primary-light: #EFF6FF;
+            --success: #16A34A;
+            --success-light: #DCFCE7;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --danger: #DC2626;
+            --danger-light: #FEE2E2;
+            --bg-main: #F6F8FB;
+            --bg-card: #FFFFFF;
+            --border-color: #E5E7EB;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --text-light: #9CA3AF;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ================= 侧边栏布局 ================= */
+        .sidebar {
+            width: 240px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-logo {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 18px; font-weight: 700; color: var(--primary);
+        }
+
+        .brand-subtitle {
+            font-size: 11px; color: var(--text-muted);
+            margin-top: 4px; font-weight: 500;
+        }
+
+        .sidebar-menu {
+            list-style: none; padding: 24px 12px;
+            display: flex; flex-direction: column; gap: 4px; flex: 1;
+        }
+
+        .menu-item a {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px; color: var(--text-muted);
+            text-decoration: none; font-size: 14px; font-weight: 500;
+            border-radius: 8px; transition: all 0.2s;
+        }
+
+        .menu-item a:hover { background-color: var(--primary-light); color: var(--primary); }
+        .menu-item.active a { background-color: var(--primary); color: #FFFFFF; }
+
+        /* ================= 右侧主内容区域 ================= */
+        .main-layout {
+            margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-width: 0;
+        }
+
+        /* 顶部状态栏 */
+        .top-bar {
+            height: 70px; background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 32px; position: sticky; top: 0; z-index: 90;
+        }
+
+        .status-left { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+        .status-item { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+        .status-label { font-weight: 600; color: var(--text-main); }
+        .status-value-badge {
+            background-color: #F3F4F6; padding: 4px 8px; border-radius: 6px;
+            font-family: var(--font-mono); color: var(--text-main); font-size: 12px; border: 1px solid var(--border-color);
+        }
+
+        .status-right { display: flex; align-items: center; gap: 16px; }
+        .tx-status {
+            display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500;
+            background-color: #F3F4F6; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border-color);
+        }
+
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background-color: var(--text-light); }
+        .status-dot.idle { background-color: var(--text-light); }
+        .status-dot.pending { background-color: var(--warning); animation: pulse 1.5s infinite; }
+        .status-dot.success { background-color: var(--success); }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; }
+        }
+
+        .btn-connect {
+            background-color: var(--primary); color: #FFFFFF; border: none;
+            padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .btn-connect:hover { background-color: var(--primary-hover); }
+
+        /* 内容区排版 */
+        .content { padding: 32px; max-width: 1400px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; padding-bottom: 32px; }
+        
+        .page-header { margin-bottom: 4px; }
+        .page-title { font-size: 24px; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px; }
+        .page-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
+
+        /* 卡片基础样式 */
+        .card {
+            background-color: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .card-title { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        /* ================= 第一排：部署信息 + 合约配置 ================= */
+        .grid-two-col { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; }
+
+        .info-list { display: flex; flex-direction: column; gap: 14px; }
+        .info-row { display: grid; grid-template-columns: 120px 1fr; align-items: center; font-size: 13px; }
+        .info-label { color: var(--text-muted); font-weight: 500; }
+        .info-value { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); }
+        .info-value.mono { font-family: var(--font-mono); font-weight: 500; }
+
+        /* 复制按钮样式 */
+        .btn-copy {
+            background: none; border: none; color: var(--text-light); cursor: pointer; display: inline-flex; align-items: center; padding: 2px; border-radius: 4px; transition: all 0.15s;
+        }
+        .btn-copy:hover { color: var(--primary); background-color: var(--primary-light); }
+
+        /* 状态标签胶囊 */
+        .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-success { background-color: var(--success-light); color: var(--success); }
+        .badge-warning { background-color: var(--warning-light); color: var(--warning); }
+        .badge-primary { background-color: var(--primary-light); color: var(--primary); }
+
+        /* 精致参数网格 */
+        .param-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .param-box { background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; }
+        .param-label { font-size: 11px; color: var(--text-light); font-family: var(--font-mono); margin-bottom: 4px; }
+        .param-value { font-size: 14px; font-weight: 700; color: var(--text-main); }
+
+        /* ================= 表格样式（通用） ================= */
+        .table-wrapper { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; }
+        .demo-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+        .demo-table th { background-color: #F8FAFC; padding: 12px 16px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border-color); }
+        .demo-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
+        .demo-table tbody tr { transition: background-color 0.15s; cursor: pointer; }
+        .demo-table tbody tr:hover { background-color: #F9FAFB; }
+        .demo-table tbody tr.active-row { background-color: #EFF6FF !important; border-left: 3px solid var(--primary); }
+
+        /* 角色微型标牌 */
+        .role-tag { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+        .role-seller { background-color: #F3E8FF; color: #7E22CE; }
+        .role-buyer { background-color: #E0F2FE; color: #0369A1; }
+        .role-arbiter { background-color: #DCFCE7; color: #15803D; }
+
+        /* ================= 底部两栏：时间线 + 流程提示 ================= */
+        .grid-bottom-col { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; }
+
+        /* 纵向测试交易时间线 */
+        .timeline-list { display: flex; flex-direction: column; gap: 0; position: relative; padding-left: 20px; }
+        .timeline-list::before { content: ''; position: absolute; left: 4px; top: 8px; bottom: 8px; width: 2px; background-color: var(--border-color); }
+        
+        .timeline-item { position: relative; padding-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; cursor: pointer; padding-left: 12px; border-radius: 6px; transition: background-color 0.2s; padding-top: 4px; padding-bottom: 4px; margin-bottom: 6px; }
+        .timeline-item:hover { background-color: #F8FAFC; }
+        .timeline-item.active-row { background-color: var(--primary-light); }
+        
+        .timeline-marker { position: absolute; left: -20px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 50%; background-color: var(--border-color); border: 2px solid #fff; transition: all 0.2s; }
+        .timeline-item:hover .timeline-marker { background-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+        .timeline-item.active-row .timeline-marker { background-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); }
+
+        .tl-left { display: flex; flex-direction: column; gap: 2px; }
+        .tl-event { font-weight: 700; color: var(--text-main); }
+        .tl-hash { font-family: var(--font-mono); color: var(--primary); font-size: 12px; }
+        .tl-right { display: flex; align-items: center; gap: 12px; text-align: right; }
+        .tl-time { color: var(--text-light); font-size: 12px; }
+
+        /* 课堂演示步骤 */
+        .step-list { display: flex; flex-direction: column; gap: 12px; }
+        .step-box { display: flex; gap: 12px; background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; }
+        .step-num { background-color: var(--primary-light); color: var(--primary); font-weight: 700; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; shrink: 0; font-size: 12px; }
+        .step-text { font-size: 13px; color: var(--text-main); font-weight: 500; line-height: 1.4; }
+
+        /* 风险提示框 */
+        .risk-card { background-color: #FFFBEB; border: 1px dashed var(--warning); border-radius: 8px; padding: 14px; display: flex; gap: 10px; margin-top: 16px; }
+        .risk-icon { color: var(--warning); shrink: 0; }
+        .risk-text { font-size: 12px; color: #92400E; line-height: 1.5; }
+
+        /* ================= 浮动通知 (Toast) ================= */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background-color: #1F2937; color: #FFFFFF; padding: 10px 16px; border-radius: 6px;
+            font-size: 12px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex; align-items: center; gap: 6px; transform: translateY(10px); opacity: 0; animation: slideIn 0.25s forwards;
+        }
+        @keyframes slideIn { to { transform: translateY(0); opacity: 1; } }
+
+        /* ================= 响应式媒体查询 ================= */
+        @media (max-width: 1200px) {
+            .grid-two-col, .grid-bottom-col { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-layout { margin-left: 0; }
+            .top-bar { padding: 0 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 左侧侧边栏 -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-logo">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Escrow Market</span>
+            </div>
+            <div class="brand-subtitle">链上二手交易担保系统</div>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                    <span>总览 Dashboard</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    <span>交易市场 Marketplace</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>交易详情 Trade Detail</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+                    <span>仲裁中心 Arbitration</span>
+                </a>
+            </li>
+            <li class="menu-item active">
+                <a href="#">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>部署演示 Deployment</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- 主布局 -->
+    <div class="main-layout">
+        <!-- 顶部状态栏 -->
+        <header class="top-bar">
+            <div class="status-left">
+                <div class="status-item">
+                    <span class="status-label">网络:</span>
+                    <span class="status-value-badge" style="color: var(--primary); font-weight: bold;">Sepolia 测试网</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">核心合约:</span>
+                    <span class="status-value-badge">0x9b2...4a71</span>
+                </div>
+            </div>
+            <div class="status-right">
+                <div class="tx-status">
+                    <span class="status-label">演示广播状态:</span>
+                    <span id="global-dot" class="status-dot idle"></span>
+                    <span id="global-text" style="color: var(--text-muted);">Idle</span>
+                </div>
+                <div class="status-item">
+                    <span id="wallet-badge" class="status-value-badge">未连接演示钱包</span>
+                </div>
+                <button class="btn-connect" id="btn-connect" onclick="triggerConnectWallet()">
+                    <span>连接钱包</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主体内容 -->
+        <main class="content">
+            <!-- 页面标题 -->
+            <div class="page-header">
+                <h1 class="page-title">Sepolia 部署与课堂演示</h1>
+                <p class="page-subtitle">本面板集中展示了智能合约的生产环境部署参数、沙盒测试账户、以及完整的课堂端到端状态机测试日志，供答辩演示审查。</p>
+            </div>
+
+            <!-- 第一排：部署信息 + 精致配置参数 -->
+            <div class="grid-two-col">
+                <!-- 部署状态卡片 -->
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                        智能合约链上发布快照
+                    </div>
+                    <div class="info-list">
+                        <div class="info-row">
+                            <span class="info-label">合约代号 (Name)</span>
+                            <span class="info-value"><span class="badge badge-primary">EscrowMarketplace</span></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">合约公钥地址</span>
+                            <span class="info-value mono">
+                                0x9b2c3d4e5f6a7182930415161718192021224a71
+                                <button class="btn-copy" onclick="mockCopy('0x9b2c3d4e5f6a7182930415161718192021224a71')">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">部署者 (Deployer)</span>
+                            <span class="info-value mono">
+                                0xA12F3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F89F
+                                <button class="btn-copy" onclick="mockCopy('0xA12F3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F89F')">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">发布交易哈希</span>
+                            <span class="info-value mono">
+                                0xabc123e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9def789
+                                <button class="btn-copy" onclick="mockCopy('0xabc123e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9def789')">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">区块打包时间</span>
+                            <span class="info-value">2026-06-28 14:30:12 (UTC+8)</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Etherscan 验证</span>
+                            <span class="info-value"><span class="badge badge-success">✓ 已通过源码验证 (Verified)</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 核心全局配置常数 -->
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        智能合约底层 Constructor 参数
+                    </div>
+                    <div class="param-grid">
+                        <div class="param-box">
+                            <div class="param-label">deliveryWindow</div>
+                            <div class="param-value">1 小时 <span style="font-size:11px; font-weight:normal; color:var(--text-light);">(演示精简版)</span></div>
+                        </div>
+                        <div class="param-box">
+                            <div class="param-label">confirmWindow</div>
+                            <div class="param-value">1 小时 <span style="font-size:11px; font-weight:normal; color:var(--text-light);">(演示精简版)</span></div>
+                        </div>
+                        <div class="param-box">
+                            <div class="param-label">arbiterStakeAmount</div>
+                            <div class="param-value" style="color:var(--primary)">0.10 ETH</div>
+                        </div>
+                        <div class="param-box">
+                            <div class="param-label">disputeDeposit</div>
+                            <div class="param-value" style="color:var(--warning)">0.001 ETH</div>
+                        </div>
+                        <div class="param-box">
+                            <div class="param-label">minActiveArbiters</div>
+                            <div class="param-value">3 名</div>
+                        </div>
+                        <div class="param-box">
+                            <div class="param-label">Solidity 编译器</div>
+                            <div class="param-value">v0.8.20 + Paris</div>
+                        </div>
+                        <div class="param-box" style="grid-column: span 2;">
+                            <div class="param-label">引入核心第三方库依赖 (Libraries)</div>
+                            <div class="param-value" style="font-size:12px;">OpenZeppelin Contracts (ReentrancyGuard, Ownable)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第二排：沙盒测试演示账户明细 -->
+            <div class="card">
+                <div class="card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    答辩沙盒集群：演示钱包账户矩阵
+                </div>
+                <div class="table-wrapper">
+                    <table class="demo-table">
+                        <thead>
+                            <tr>
+                                <th>角色 (Role)</th>
+                                <th>确定性公开测试地址</th>
+                                <th>系统核心职责与演示方法</th>
+                                <th>初始状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr onclick="highlightRow(this)">
+                                <td><span class="role-tag role-seller">Seller (卖家)</span></td>
+                                <td class="mono">0xA12F3...89FCa3</td>
+                                <td>调用 <code>createItem()</code> 挂牌、<code>markItemDelivered()</code> 发货、<code>withdraw()</code> 提取货款</td>
+                                <td><span class="badge badge-success">✓ 节点就绪</span></td>
+                            </tr>
+                            <tr onclick="highlightRow(this)">
+                                <td><span class="role-tag role-buyer">Buyer (买家)</span></td>
+                                <td class="mono">0xB456d...12C89e</td>
+                                <td>调用 <code>purchaseItem()</code> 资金入合约锁仓、<code>confirmReceived()</code> 放款、<code>openDispute()</code> 追偿</td>
+                                <td><span class="badge badge-success">✓ 节点就绪</span></td>
+                            </tr>
+                            <tr onclick="highlightRow(this)">
+                                <td><span class="role-tag role-arbiter">Arbiter 1 (仲裁员)</span></td>
+                                <td class="mono">0xF11c3...A92911</td>
+                                <td>质押 0.1 ETH 激活席位权，通过 <code>submitArbitrationVote()</code> 独立交叉签署裁决意向</td>
+                                <td><span class="badge badge-primary">已质押保证金</span></td>
+                            </tr>
+                            <tr onclick="highlightRow(this)">
+                                <td><span class="role-tag role-arbiter">Arbiter 2 (仲裁员)</span></td>
+                                <td class="mono">0xF22d9...B7142A</td>
+                                <td>质押 0.1 ETH 激活席位权，独立交叉签署裁决意向（联合多数决）</td>
+                                <td><span class="badge badge-primary">已质押保证金</span></td>
+                            </tr>
+                            <tr onclick="highlightRow(this)">
+                                <td><span class="role-tag role-arbiter">Arbiter 3 (仲裁员)</span></td>
+                                <td class="mono">0xF33a1...C1829b</td>
+                                <td>质押 0.1 ETH 激活席位权，独立签署裁决意向（少数派惩罚模型演练）</td>
+                                <td><span class="badge badge-primary">已质押保证金</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 第三排：交易哈希序列 + 步骤提示 -->
+            <div class="grid-bottom-col">
+                <!-- 测试交易哈希回放 -->
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        端到端生命周期：全流程链上交易哈希存证 (单击行高亮)
+                    </div>
+                    <div class="timeline-list">
+                        <div class="timeline-item" onclick="highlightRow(this)">
+                            <div class="timeline-marker"></div>
+                            <div class="tl-left">
+                                <span class="tl-event">1. 商品挂牌 ItemCreated</span>
+                                <span class="tl-hash">0x8831...fa4b</span>
+                            </div>
+                            <div class="tl-right">
+                                <span class="badge badge-success">Success</span>
+                                <span class="tl-time">2天前</span>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item" onclick="highlightRow(this)">
+                            <div class="timeline-marker"></div>
+                            <div class="tl-left">
+                                <span class="tl-event">2. 买家锁仓 ItemPurchased</span>
+                                <span class="tl-hash">0xbc32...00fa</span>
+                            </div>
+                            <div class="tl-right">
+                                <span class="badge badge-success">Success</span>
+                                <span class="tl-time">1天前</span>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item" onclick="highlightRow(this)">
+                            <div class="timeline-marker"></div>
+                            <div class="tl-left">
+                                <span class="tl-event">3. 卖家交付 ItemDelivered</span>
+                                <span class="tl-hash">0x5f81...781a</span>
+                            </div>
+                            <div class="tl-right">
+                                <span class="badge badge-success">Success</span>
+                                <span class="tl-time">5小时前</span>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item" onclick="highlightRow(this)">
+                            <div class="timeline-marker"></div>
+                            <div class="tl-left">
+                                <span class="tl-event">4. 逆向申诉 DisputeOpened</span>
+                                <span class="tl-hash">0x4a92...9bf2</span>
+                            </div>
+                            <div class="tl-right">
+                                <span class="badge badge-success">Success</span>
+                                <span class="tl-time">3分钟前</span>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item" onclick="highlightRow(this)">
+                            <div class="timeline-marker"></div>
+                            <div class="tl-left">
+                                <span class="tl-event">5. 保证金清算 DisputeDepositPaid</span>
+                                <span class="tl-hash">0xd221...e82a</span>
+                            </div>
+                            <div class="tl-right">
+                                <span class="badge badge-success">Success</span>
+                                <span class="tl-time">2分钟前</span>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item" onclick="highlightRow(this)">
+                            <div class="timeline-marker"></div>
+                            <div class="tl-left">
+                                <span class="tl-event">6. 仲裁签名归集 VoteSubmitted</span>
+                                <span class="tl-hash">0x7d21...e31b</span>
+                            </div>
+                            <div class="tl-right">
+                                <span class="badge badge-success">Success</span>
+                                <span class="tl-time">10秒前</span>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item" onclick="highlightRow(this)">
+                            <div class="timeline-marker"></div>
+                            <div class="tl-left">
+                                <span class="tl-event">7. 阈值触发清算 ArbitrationFinalized</span>
+                                <span class="tl-hash">0xe34a...91fa</span>
+                            </div>
+                            <div class="tl-right">
+                                <span class="badge badge-success">Success</span>
+                                <span class="tl-time">刚刚</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 流程指南与风险卡片 -->
+                <div class="card" style="display:flex; flex-direction:column; justify-content:between;">
+                    <div>
+                        <div class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            课堂答辩端到端标准演示路径指南
+                        </div>
+                        <div class="step-list">
+                            <div class="step-box">
+                                <div class="step-num">1</div>
+                                <div class="step-text">点击右上方【连接钱包】，载入买卖双边及仲裁员的硬编码多签凭证集群。</div>
+                            </div>
+                            <div class="step-box">
+                                <div class="step-num">2</div>
+                                <div class="step-text">切入 Marketplace 面板，使用卖家地址调用 <code>createItem()</code> 模拟上链挂牌。</div>
+                            </div>
+                            <div class="step-box">
+                                <div class="step-num">3</div>
+                                <div class="step-text">切换至买家，付款触发 <code>purchaseItem()</code>，向托管合约足额锁仓 0.5 ETH。</div>
+                            </div>
+                            <div class="step-box">
+                                <div class="step-num">4</div>
+                                <div class="step-text">演练正常流（直接 Confirm 结算放款）或分歧流（进入 Arbitration 面板多签计票）。</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 安全红线提示 -->
+                    <div class="risk-card">
+                        <div class="risk-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <div class="risk-text">
+                            <strong>答辩提防与安全红线：</strong><br>
+                            本开源项目前端代码绝不包含、不提交任何私钥或 <code>.env</code> 隐私敏感常数文件。所有链上数据均使用 RPC Node 统一广播，测试金额参数已做脱敏 Demo 配置，切勿在主网上运行。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 弹窗通知容器 -->
+    <div class="toast-container" id="toast-wrapper"></div>
+
+    <script>
+        // --- 纯原生模拟交互逻辑 ---
+        let isWalletLinked = false;
+
+        function showToastNotice(text) {
+            const wrap = document.getElementById('toast-wrapper');
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>${text}</span>
+            `;
+            wrap.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.25s ease';
+                setTimeout(() => el.remove(), 250);
+            }, 2500);
+        }
+
+        function mockCopy(text) {
+            // 原生 Clipboard API 复制封装
+            navigator.clipboard.writeText(text).then(() => {
+                showToastNotice('哈希/地址已成功复制至系统剪贴板！');
+            }).catch(() => {
+                showToastNotice('复制失败，请手动选择复制。');
+            });
+        }
+
+        function highlightRow(element) {
+            // 支持表格行或时间线行相互切换排他高亮
+            const parent = element.parentElement;
+            parent.querySelectorAll('.active-row').forEach(el => el.classList.remove('active-row'));
+            element.classList.add('active-row');
+            showToastNotice('已锁定目标区块高度及交易流快照。');
+        }
+
+        function triggerConnectWallet() {
+            if (isWalletLinked) return;
+            const btn = document.getElementById('btn-connect');
+            const dot = document.getElementById('global-dot');
+            const txt = document.getElementById('global-text');
+            const badge = document.getElementById('wallet-badge');
+
+            btn.innerText = '广播中...';
+            dot.className = 'status-dot pending';
+            txt.innerText = 'Pending';
+            txt.style.color = 'var(--warning)';
+            showToastNotice('正在向 Sepolia 测试网节点申请多签会话握手...');
+
+            setTimeout(() => {
+                isWalletLinked = true;
+                btn.innerText = '已连接演示锁';
+                btn.style.backgroundColor = 'var(--success)';
+                badge.innerText = '演示集群: 0x7a3...91f2';
+                badge.style.color = 'var(--success)';
+                badge.style.borderColor = 'var(--success)';
+                
+                dot.className = 'status-dot success';
+                txt.innerText = 'Success';
+                txt.style.color = 'var(--success)';
+                showToastNotice('答辩集群凭证集挂载完毕！只读与状态机广播链路就绪。');
+
+                setTimeout(() => {
+                    dot.className = 'status-dot idle';
+                    txt.innerText = 'Idle';
+                    txt.style.color = 'var(--text-muted)';
+                }, 1500);
+
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

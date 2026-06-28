@@ -41,15 +41,18 @@
   - 卖家不能购买自己的商品。
   - 已下架或不可购买。
   - 无可提现余额。
-- [x] 定义事件，事件参数必须包含 `itemId` 和关键参与方：
-  - `ItemCreated(uint256 indexed itemId, address indexed seller, uint256 price, string metadataHash)`
-  - `ItemPriceUpdated(uint256 indexed itemId, uint256 oldPrice, uint256 newPrice)`
-  - `ItemMetadataUpdated(uint256 indexed itemId, string oldMetadataHash, string newMetadataHash)`
-  - `ItemDelisted(uint256 indexed itemId, address indexed seller)`
-  - `ItemPurchased(uint256 indexed itemId, address indexed buyer, uint256 price)`
-  - `ItemDelivered(uint256 indexed itemId, address indexed seller)`
-  - `ItemReceived(uint256 indexed itemId, address indexed buyer)`
-  - `Withdrawal(address indexed seller, uint256 amount)`
+- [x] 定义事件：
+  - 商品级事件必须包含 `itemId` 和关键参与方：
+    - `ItemCreated(uint256 indexed itemId, address indexed seller, uint256 price, string metadataHash)`
+    - `ItemPriceUpdated(uint256 indexed itemId, uint256 oldPrice, uint256 newPrice)`
+    - `ItemMetadataUpdated(uint256 indexed itemId, string oldMetadataHash, string newMetadataHash)`
+    - `ItemDelisted(uint256 indexed itemId, address indexed seller)`
+    - `ItemPurchased(uint256 indexed itemId, address indexed buyer, uint256 price)`
+    - `ItemDelivered(uint256 indexed itemId, address indexed seller)`
+    - `ItemReceived(uint256 indexed itemId, address indexed buyer)`
+  - 账户级聚合提款事件不包含 `itemId`（一次提款可覆盖多个商品的可提现余额）：
+    - `Withdrawal(address indexed account, uint256 amount)`
+  - 商品到实际链上提款的关联应通过 `ItemReceived` 等入账事件与 `Withdrawal` 组合追踪
 
 ## 2. 合约函数与代码规范
 

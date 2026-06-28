@@ -149,7 +149,19 @@
 - **THEN** 系统先更新内部余额状态
 - **AND** 再执行外部转账
 
-#### Scenario: 关键动作可被事件追踪
+#### Scenario: 商品级关键动作可被事件追踪
 
-- **WHEN** 商品创建、改价、更新元数据、下架、付款托管、标记交付、确认收货或提款成功
+- **WHEN** 商品创建、改价、更新元数据、下架、付款托管、标记交付或确认收货成功
 - **THEN** 系统发出包含 `itemId` 和关键参与方的事件
+
+#### Scenario: 账户级聚合提款事件
+
+- **WHEN** 账户成功提取可提现余额
+- **THEN** 系统发出 `Withdrawal(address indexed account, uint256 amount)` 事件
+- **AND** 该事件记录提现账户和金额，不要求包含 `itemId`
+
+#### Scenario: 商品资金入账与提款关联
+
+- **WHEN** 需要追踪某笔商品资金何时实际转出链上
+- **THEN** 应通过 `ItemReceived(itemId, buyer)` 等商品级资金入账事件与后续 `Withdrawal(account, amount)` 组合分析
+- **AND** 因为 pull payment 允许一次提款包含多个商品的可提现余额，不在 `Withdrawal` 中强行绑定单一 `itemId`
