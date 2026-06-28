@@ -60,6 +60,7 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         uint256 voteThresholdSnapshot;
         bool resolved;
         address[] voters;
+        address[] eligibleArbitersSnapshot;
         bool reputationCounted;
     }
 
@@ -94,6 +95,8 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
     mapping(address => bool) public activeArbiters;
     uint256 public activeArbiterCount;
     mapping(address => uint256) public arbiterLockedDisputeCount;
+    mapping(uint256 => mapping(address => bool)) public disputeEligibleArbiter;
+    address[] internal activeArbiterList;
     mapping(address => uint256) public completedTradeCount;
     mapping(address => uint256) public disputeCount;
     mapping(address => uint256) public buyerWinCount;
@@ -533,6 +536,7 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         dispute.disputeStartedAt = block.timestamp;
         dispute.arbiterCountSnapshot = activeArbiterCount;
         dispute.voteThresholdSnapshot = _computeVoteThreshold(activeArbiterCount);
+        _snapshotEligibleArbiters(itemId, item.buyer, item.seller);
         item.state = State.Disputed;
 
         emit DisputeResponded(itemId, msg.sender);
@@ -581,7 +585,6 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         arbiterHasVoted[itemId][msg.sender] = true;
         arbiterVoteSupportBuyer[itemId][msg.sender] = supportBuyer;
         dispute.voters.push(msg.sender);
-        _lockArbiterForDispute(msg.sender);
 
         if (supportBuyer) {
             dispute.buyerVotes++;
@@ -656,7 +659,7 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         _recordMainFundsOutcome(item, buyerWins);
         _settleSellerStake(itemId, buyerWins);
         _recordDisputeReputation(itemId, buyerWins);
-        _unlockAllVoters(itemId);
+        _unlockSnapshotArbiters(itemId);
 
         if (dispute.buyerDepositPaid) {
             pendingWithdrawals[item.buyer] += disputeDeposit;
@@ -681,7 +684,7 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         if (dispute.disputeInitiator == address(0)) revert InvalidState();
         if (!dispute.resolved) revert DisputeNotResolved();
 
-        if (!_isValidReportTarget(itemId, arbiter)) revert InvalidReportTarget();
+        if (!_isValidDisputeReportTarget(itemId, arbiter)) revert InvalidReportTarget();
 
         bool upheld = !arbiterHasVoted[itemId][arbiter];
         ReportStatus status = upheld ? ReportStatus.Upheld : ReportStatus.Rejected;
@@ -722,8 +725,14 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         if (msg.value != reportDeposit) revert IncorrectReportDeposit();
         if (evidenceHash == bytes32(0)) revert EmptyEvidenceHash();
 
-        _getItem(itemId);
-        if (!_isValidReportTarget(itemId, arbiter)) revert InvalidReportTarget();
+        Item storage item = _getItem(itemId);
+        if (item.state != State.Inactive) revert InvalidState();
+
+        Dispute storage dispute = disputes[itemId];
+        if (dispute.disputeInitiator == address(0)) revert InvalidState();
+        if (!dispute.resolved) revert DisputeNotResolved();
+
+        if (!_isValidDisputeReportTarget(itemId, arbiter)) revert InvalidReportTarget();
 
         uint256 reportId = nextReportId++;
         reports[reportId] = Report({
@@ -785,6 +794,7 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         arbiterStakes[msg.sender] = msg.value;
         activeArbiters[msg.sender] = true;
         activeArbiterCount++;
+        activeArbiterList.push(msg.sender);
 
         emit ArbiterStaked(msg.sender, msg.value);
     }
@@ -800,6 +810,7 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         arbiterStakes[msg.sender] = 0;
         activeArbiters[msg.sender] = false;
         activeArbiterCount--;
+        _removeActiveArbiterFromList(msg.sender);
 
         (bool success, ) = payable(msg.sender).call{value: amount}("");
         if (!success) revert TransferFailed();
@@ -816,6 +827,13 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
             activeArbiters[arbiter] &&
             arbiter != item.seller &&
             arbiter != item.buyer;
+    }
+
+    function isDisputeEligibleArbiter(
+        uint256 itemId,
+        address arbiter
+    ) public view returns (bool) {
+        return disputeEligibleArbiter[itemId][arbiter];
     }
 
     function _resolveDispute(
@@ -835,7 +853,7 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         _settleSellerStake(itemId, buyerWins);
         _recordDisputeReputation(itemId, buyerWins);
         _recordDisputeDepositsOutcome(itemId, buyerWins, rewardArbiters);
-        _unlockAllVoters(itemId);
+        _unlockSnapshotArbiters(itemId);
 
         emit DisputeResolved(itemId, buyerWins, reason);
     }
@@ -907,7 +925,7 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         }
     }
 
-    function _isValidReportTarget(
+    function _isValidDisputeReportTarget(
         uint256 itemId,
         address arbiter
     ) internal view returns (bool) {
@@ -915,7 +933,41 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         if (arbiter == item.seller || arbiter == item.buyer) {
             return false;
         }
-        return activeArbiters[arbiter] || arbiterStakes[arbiter] > 0;
+        return
+            disputeEligibleArbiter[itemId][arbiter] ||
+            arbiterHasVoted[itemId][arbiter];
+    }
+
+    function _snapshotEligibleArbiters(
+        uint256 itemId,
+        address buyer,
+        address seller
+    ) internal {
+        Dispute storage dispute = disputes[itemId];
+        uint256 length = activeArbiterList.length;
+        for (uint256 i = 0; i < length; i++) {
+            address arbiter = activeArbiterList[i];
+            if (!activeArbiters[arbiter]) {
+                continue;
+            }
+            if (arbiter == buyer || arbiter == seller) {
+                continue;
+            }
+            dispute.eligibleArbitersSnapshot.push(arbiter);
+            disputeEligibleArbiter[itemId][arbiter] = true;
+            _lockArbiterForDispute(arbiter);
+        }
+    }
+
+    function _removeActiveArbiterFromList(address arbiter) internal {
+        uint256 length = activeArbiterList.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (activeArbiterList[i] == arbiter) {
+                activeArbiterList[i] = activeArbiterList[length - 1];
+                activeArbiterList.pop();
+                return;
+            }
+        }
     }
 
     function _recordMainFundsOutcome(
@@ -986,10 +1038,13 @@ contract EscrowMarketplace is ReentrancyGuard, Ownable {
         }
     }
 
-    function _unlockAllVoters(uint256 itemId) internal {
+    function _unlockSnapshotArbiters(uint256 itemId) internal {
         Dispute storage dispute = disputes[itemId];
-        for (uint256 i = 0; i < dispute.voters.length; i++) {
-            _unlockArbiterForDispute(dispute.voters[i]);
+        for (uint256 i = 0; i < dispute.eligibleArbitersSnapshot.length; i++) {
+            address arbiter = dispute.eligibleArbitersSnapshot[i];
+            if (arbiterLockedDisputeCount[arbiter] > 0) {
+                _unlockArbiterForDispute(arbiter);
+            }
         }
     }
 

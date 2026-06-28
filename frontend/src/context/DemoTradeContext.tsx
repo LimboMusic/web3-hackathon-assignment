@@ -21,6 +21,24 @@ function buildClassroomTrade(item = getTradeDetailMock(CLASSROOM_TRADE_ID)): Tra
   return { ...item };
 }
 
+function syncClassroomTradeToMarketplace(
+  trade: TradeDetailMock,
+  syncMarketplaceItemState: (itemId: number, state: TradeDetailMock['state']) => void,
+  updateMarketplaceItem: (
+    itemId: number,
+    patch: { state: TradeDetailMock['state']; buyer?: string; buyerShort?: string },
+  ) => void,
+) {
+  queueMicrotask(() => {
+    syncMarketplaceItemState(trade.itemId, trade.state);
+    updateMarketplaceItem(trade.itemId, {
+      state: trade.state,
+      buyer: trade.buyer || undefined,
+      buyerShort: trade.buyerShort !== '—' ? trade.buyerShort : undefined,
+    });
+  });
+}
+
 export function DemoTradeProvider({ children }: { children: ReactNode }) {
   const {
     getMarketplaceItem,
@@ -48,24 +66,14 @@ export function DemoTradeProvider({ children }: { children: ReactNode }) {
 
   const setClassroomTrade = useCallback((trade: TradeDetailMock) => {
     setClassroomTradeState(trade);
-    syncMarketplaceItemState(trade.itemId, trade.state);
-    updateMarketplaceItem(trade.itemId, {
-      state: trade.state,
-      buyer: trade.buyer || undefined,
-      buyerShort: trade.buyerShort !== '—' ? trade.buyerShort : undefined,
-    });
+    syncClassroomTradeToMarketplace(trade, syncMarketplaceItemState, updateMarketplaceItem);
   }, [syncMarketplaceItemState, updateMarketplaceItem]);
 
   const updateClassroomTrade = useCallback(
     (patch: Partial<TradeDetailMock>) => {
       setClassroomTradeState((prev) => {
         const next = { ...prev, ...patch };
-        syncMarketplaceItemState(next.itemId, next.state);
-        updateMarketplaceItem(next.itemId, {
-          state: next.state,
-          buyer: next.buyer || undefined,
-          buyerShort: next.buyerShort !== '—' ? next.buyerShort : undefined,
-        });
+        syncClassroomTradeToMarketplace(next, syncMarketplaceItemState, updateMarketplaceItem);
         return next;
       });
     },

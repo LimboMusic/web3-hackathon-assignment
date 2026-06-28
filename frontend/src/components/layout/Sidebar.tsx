@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom';
+import { CLASSROOM_TRADE_ID } from '../../data/demoAccounts';
 
 const navItems = [
   { to: '/', label: '总览 Dashboard', end: true },
   { to: '/marketplace', label: '交易市场 Marketplace', end: false },
-  { to: '/trade/1', label: '交易详情 Trade Detail', end: false },
+  { to: `/trade/${CLASSROOM_TRADE_ID}`, label: '交易详情 Trade Detail', end: false },
   { to: '/arbitration', label: '仲裁中心 Arbitration', end: false },
   { to: '/deployment', label: '部署演示 Deployment', end: false },
 ];

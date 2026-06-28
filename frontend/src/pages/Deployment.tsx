@@ -7,12 +7,14 @@ import {
 import { useDemoUI } from '../context/useDemoUI';
 import {
   formatDeployedAt,
+  formatSeconds,
   getConstructorParamDisplays,
   getSepoliaDeployment,
   sepoliaAddressUrl,
   sepoliaTxUrl,
   shortAddress,
 } from '../data/deployment';
+import { SEPOLIA_CHAIN_ID } from '../services/ethereum';
 import {
   getClassroomGuideSteps,
   getDemoAccounts,
@@ -55,7 +57,8 @@ export function Deployment() {
   const [activeAccountRow, setActiveAccountRow] = useState<number | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [copyHint, setCopyHint] = useState('');
-  const { walletConnected, simulateDemoTx } = useDemoUI();
+  const { walletConnected, walletMode, chainId, networkLabel, contractBasics, contractReadError, simulateDemoTx } =
+    useDemoUI();
 
   useDeploymentEntrance(pageRef);
 
@@ -107,9 +110,19 @@ export function Deployment() {
       <div className="deployment-status-strip dep-animate" aria-label="部署与连接状态">
         <span className="deployment-status-pill deployed">已部署 Sepolia</span>
         <span className={`deployment-status-pill ${walletConnected ? 'network-ok' : 'wallet-warn'}`}>
-          {walletConnected ? '演示钱包已连接' : '演示钱包未连接'}
+          {walletConnected ? (walletMode === 'live' ? 'MetaMask 已连接' : 'Mock 钱包已连接') : '演示钱包未连接'}
         </span>
-        <span className="deployment-status-pill network-ok">网络匹配: Sepolia (chainId {deployment.chainId})</span>
+        <span
+          className={`deployment-status-pill ${
+            walletMode === 'live' && chainId === SEPOLIA_CHAIN_ID ? 'network-ok' : 'wallet-warn'
+          }`}
+        >
+          {walletMode === 'live' && chainId !== null
+            ? `网络: ${networkLabel} (chainId ${chainId.toString()})`
+            : walletMode === 'mock'
+              ? '课堂 Mock 模式（链上只读未启用）'
+              : `网络匹配: Sepolia (chainId ${deployment.chainId})`}
+        </span>
       </div>
 
       <div className="grid-two-col">
@@ -210,6 +223,35 @@ export function Deployment() {
                 {deployment.abiFunctionCount} 个公开函数 · 来源 {deployment.abiSource}
               </span>
             </div>
+            {contractBasics ? (
+              <>
+                <div className="dep-info-row">
+                  <span className="dep-info-label">链上 deliveryWindow</span>
+                  <span className="dep-info-value">
+                    {formatSeconds(contractBasics.deliveryWindow.toString())}
+                  </span>
+                </div>
+                <div className="dep-info-row">
+                  <span className="dep-info-label">链上 confirmWindow</span>
+                  <span className="dep-info-value">
+                    {formatSeconds(contractBasics.confirmWindow.toString())}
+                  </span>
+                </div>
+                <div className="dep-info-row">
+                  <span className="dep-info-label">链上 nextItemId</span>
+                  <span className="dep-info-value">{contractBasics.nextItemId.toString()}</span>
+                </div>
+                <div className="dep-info-row">
+                  <span className="dep-info-label">链上 activeArbiterCount</span>
+                  <span className="dep-info-value">{contractBasics.activeArbiterCount.toString()}</span>
+                </div>
+              </>
+            ) : contractReadError ? (
+              <div className="dep-info-row">
+                <span className="dep-info-label">链上只读</span>
+                <span className="dep-info-value">读取失败: {contractReadError}</span>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -217,7 +259,10 @@ export function Deployment() {
           <div className="card-header-area compact">
             <div className="card-title-group">
               <h2>智能合约底层 Constructor 参数</h2>
-              <p>与 deployments/sepolia/EscrowMarketplace.json 中 constructorArgs 一致</p>
+              <p>
+                与 deployments/sepolia/EscrowMarketplace.json 中 constructorArgs 一致
+                {contractBasics ? ' · 下方灰色区域为 MetaMask Sepolia 实时只读值' : ''}
+              </p>
             </div>
           </div>
           <div className="param-grid">

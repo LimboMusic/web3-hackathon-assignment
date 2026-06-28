@@ -1,5 +1,6 @@
 import { useDemoUI } from '../context/useDemoUI';
 import { useDemoTrade } from '../context/useDemoTrade';
+import { CLASSROOM_TRADE_ID } from '../data/demoAccounts';
 import { DEMO_ACCOUNTS } from '../data/demoAccounts';
 import type { DemoAccountId, DemoSceneId } from '../types/roles';
 import { DEMO_SCENE_LABELS } from '../types/roles';
@@ -23,7 +24,7 @@ export function DemoControlPanel() {
       <div className="demo-control-header">
         <h2 className="demo-control-title">课堂演示控制台</h2>
         <p className="demo-control-subtitle">
-          仅用于切换 Demo 账号与课堂场景，不是链上业务功能。
+          仅用于切换 Demo 账号与课堂场景，不是链上业务功能。主交易演示请打开侧边栏「交易详情」（商品 #{CLASSROOM_TRADE_ID}）。
         </p>
       </div>
 

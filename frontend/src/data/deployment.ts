@@ -7,11 +7,11 @@ const SEPOLIA_DEPLOYMENT: SepoliaDeployment = {
   network: 'sepolia',
   chainId: 11155111,
   contractName: 'EscrowMarketplace',
-  address: '0x9cAF8D529AE7f6bCB6168fbF16a7d2C709220AEF',
-  transactionHash: '0xe10349ad5a129f27334f1f97ce46f7f30067d69db8db1959cb13d017676fc00e',
-  blockNumber: 11158061,
+  address: '0xB27396a998cB63c93E432C5106bc027409d962b2',
+  transactionHash: '0x5051c249492ea53d91b70a0f94c35a86efe698a5066cef53a0f44c602913512b',
+  blockNumber: 11158813,
   deployer: '0xdf300A9a444138a8f503C801d48B7490cD894416',
-  deployedAt: '2026-06-28T11:44:03.237Z',
+  deployedAt: '2026-06-28T14:14:23.784Z',
   constructorArgs: {
     deliveryWindow: '3600',
     confirmWindow: '3600',
@@ -23,7 +23,7 @@ const SEPOLIA_DEPLOYMENT: SepoliaDeployment = {
     sellerStakeAmount: '1000000000000000',
     reportDeposit: '500000000000000',
   },
-  abiFunctionCount: 52,
+  abiFunctionCount: 54,
   abiSource: 'deployments/sepolia/EscrowMarketplace.json',
 };
 

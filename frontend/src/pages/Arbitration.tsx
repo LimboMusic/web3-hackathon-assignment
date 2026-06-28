@@ -182,7 +182,7 @@ export function Arbitration() {
 
           if (verdict !== 'voting') {
             const logEntry: ArbitrationLogEntry = {
-              id: `alog-${Date.now()}`,
+              id: `alog-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
               time: '刚刚',
               event: 'DisputeResolved',
               description:
@@ -195,7 +195,7 @@ export function Arbitration() {
             window.setTimeout(() => pulseVerdictCard(verdictRef.current), 50);
           } else {
             appendArbitrationLog({
-              id: `alog-${Date.now()}`,
+              id: `alog-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
               time: '刚刚',
               event: 'VoteSubmitted',
               description: `${matchedArbiter.name} 投票：${voteLabel(side)}`,

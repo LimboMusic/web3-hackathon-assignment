@@ -1,9 +1,9 @@
 import { txStatusLabel } from '../../animations/useTxStatusAnimation';
 import { useDemoUI } from '../../context/useDemoUI';
-import { getDashboardMock } from '../../data/mockDashboard';
+import { ESCROW_DEPLOYMENT } from '../../contracts/escrowDeployment';
+import { shortAddress } from '../../data/deployment';
+import { SEPOLIA_CHAIN_ID } from '../../services/ethereum';
 import { tradeRoleLabel, tradeRoleTagClass } from '../../utils/deriveTradeRole';
-
-const mock = getDashboardMock();
 
 function WalletIcon() {
   return (
@@ -17,7 +17,11 @@ function WalletIcon() {
 export function TopStatusBar() {
   const {
     walletConnected,
+    walletMode,
     walletAddress,
+    chainId,
+    networkLabel,
+    contractBasics,
     currentAccount,
     txStatus,
     connecting,
@@ -36,21 +40,46 @@ export function TopStatusBar() {
           ? 'buyer'
           : currentAccount?.kind === 'arbiter'
             ? 'arbitrator'
-            : 'viewer';
+            : walletMode === 'live'
+              ? 'viewer'
+              : 'viewer';
+
+  const networkBadgeClass =
+    walletMode === 'live' && chainId !== null && chainId !== SEPOLIA_CHAIN_ID
+      ? 'network-warn'
+      : 'network';
 
   return (
     <header className="top-bar">
       <div className="status-left">
         <div className="status-item">
+          <span className="status-label">模式:</span>
+          <span className={`status-value-badge ${walletMode === 'live' ? 'network-ok' : 'wallet-warn'}`}>
+            {walletMode === 'live' ? '链上钱包' : '课堂 Mock'}
+          </span>
+        </div>
+        <div className="status-item">
           <span className="status-label">网络:</span>
-          <span className="status-value-badge network">Sepolia 测试网</span>
+          <span className={`status-value-badge ${networkBadgeClass}`}>
+            {walletConnected ? networkLabel : '未连接'}
+            {walletMode === 'live' && chainId !== null ? ` (${chainId.toString()})` : ''}
+          </span>
         </div>
         <div className="status-item status-item-contract">
           <span className="status-label">合约:</span>
-          <span className="status-value-badge" title={mock.contractAddress}>
-            {mock.contractAddressShort}
+          <span className="status-value-badge" title={ESCROW_DEPLOYMENT.address}>
+            {shortAddress(ESCROW_DEPLOYMENT.address)}
           </span>
         </div>
+        {walletConnected && contractBasics ? (
+          <div className="status-item">
+            <span className="status-label">链上:</span>
+            <span className="status-value-badge">
+              nextItemId={contractBasics.nextItemId.toString()} · arbiters=
+              {contractBasics.activeArbiterCount.toString()}
+            </span>
+          </div>
+        ) : null}
         {walletConnected && currentAccount ? (
           <div className="status-item status-item-role">
             <span className="status-label">当前账号:</span>
@@ -58,6 +87,11 @@ export function TopStatusBar() {
             <span className={`role-tag ${tradeRoleTagClass(globalRole)}`}>
               {tradeRoleLabel(globalRole)}
             </span>
+          </div>
+        ) : walletConnected && walletMode === 'live' ? (
+          <div className="status-item status-item-role">
+            <span className="status-label">当前账号:</span>
+            <span className="status-value-badge account-badge">MetaMask 地址</span>
           </div>
         ) : null}
       </div>
@@ -77,7 +111,7 @@ export function TopStatusBar() {
           type="button"
           className="btn-connect"
           disabled={walletConnected || connecting}
-          onClick={connectWallet}
+          onClick={() => void connectWallet()}
         >
           <WalletIcon />
           <span>{connecting ? '正在连接...' : walletConnected ? '已连接钱包' : '连接钱包'}</span>

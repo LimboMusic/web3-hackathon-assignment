@@ -1492,14 +1492,21 @@ describe("EscrowMarketplace", function () {
       await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
     });
 
-    it("does not lower threshold when non-voting arbiters withdraw", async function () {
+    it("locks non-voting snapshot arbiters from withdrawing during dispute", async function () {
       const disputeBefore = await marketplace.disputes(1);
       expect(disputeBefore.arbiterCountSnapshot).to.equal(3n);
       expect(disputeBefore.voteThresholdSnapshot).to.equal(2n);
+      expect(
+        await marketplace.isDisputeEligibleArbiter(1, arbiter3.address)
+      ).to.equal(true);
 
-      await withdrawArbiterStake(arbiter2);
-      await withdrawArbiterStake(arbiter3);
-      expect(await marketplace.activeArbiterCount()).to.equal(1n);
+      await expect(
+        withdrawArbiterStake(arbiter2)
+      ).to.be.revertedWithCustomError(marketplace, "ArbiterLockedInDispute");
+      await expect(
+        withdrawArbiterStake(arbiter3)
+      ).to.be.revertedWithCustomError(marketplace, "ArbiterLockedInDispute");
+      expect(await marketplace.activeArbiterCount()).to.equal(3n);
 
       await voteDispute(1, arbiter1, true);
 
@@ -1512,8 +1519,12 @@ describe("EscrowMarketplace", function () {
     });
 
     it("resolves only after votes reach snapshotted threshold", async function () {
-      await withdrawArbiterStake(arbiter2);
-      await withdrawArbiterStake(arbiter3);
+      await expect(
+        withdrawArbiterStake(arbiter2)
+      ).to.be.revertedWithCustomError(marketplace, "ArbiterLockedInDispute");
+      await expect(
+        withdrawArbiterStake(arbiter3)
+      ).to.be.revertedWithCustomError(marketplace, "ArbiterLockedInDispute");
 
       await voteDispute(1, arbiter1, true);
 
@@ -1525,6 +1536,14 @@ describe("EscrowMarketplace", function () {
       expect(await marketplace.pendingWithdrawals(buyer.address)).to.equal(
         PRICE + DISPUTE_DEPOSIT
       );
+    });
+
+    it("prevents voting arbiters from withdrawing before dispute ends", async function () {
+      await voteDispute(1, arbiter1, true);
+
+      await expect(
+        withdrawArbiterStake(arbiter1)
+      ).to.be.revertedWithCustomError(marketplace, "ArbiterLockedInDispute");
     });
   });
 
@@ -1870,14 +1889,20 @@ describe("EscrowMarketplace", function () {
       ).to.be.revertedWithCustomError(marketplace, "IncorrectReportDeposit");
     });
 
-    it("reverts when reporting arbiter who withdrew after dispute ended", async function () {
+    it("upholds report when snapshotted arbiter withdrew after dispute ended", async function () {
       await withdrawArbiterStake(arbiter3);
 
-      await expect(
-        marketplace
-          .connect(other)
-          .reportNoVote(1, arbiter3.address, { value: REPORT_DEPOSIT })
-      ).to.be.revertedWithCustomError(marketplace, "InvalidReportTarget");
+      const tx = await marketplace
+        .connect(other)
+        .reportNoVote(1, arbiter3.address, { value: REPORT_DEPOSIT });
+
+      expect(await marketplace.pendingWithdrawals(other.address)).to.equal(
+        REPORT_DEPOSIT
+      );
+
+      await expect(tx)
+        .to.emit(marketplace, "ReportResolved")
+        .withArgs(1, true);
     });
   });
 
@@ -2288,6 +2313,22 @@ describe("EscrowMarketplace", function () {
         marketplace,
         "OwnableUnauthorizedAccount"
       );
+    });
+  });
+
+  describe("dispute eligible arbiter reporting", function () {
+    it("reverts misconduct report on item without dispute", async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+
+      await expect(
+        marketplace
+          .connect(other)
+          .reportMisconduct(1, arbiter1.address, MISCONDUCT_EVIDENCE, {
+            value: REPORT_DEPOSIT,
+          })
+      ).to.be.revertedWithCustomError(marketplace, "InvalidState");
     });
   });
 });

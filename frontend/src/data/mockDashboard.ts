@@ -1,16 +1,16 @@
 import type { DashboardMock } from '../types/demo';
 
-const CONTRACT_ADDRESS = '0x9cAF8D529AE7f6bCB6168fbF16a7d2C709220AEF';
+const CONTRACT_ADDRESS = '0xB27396a998cB63c93E432C5106bc027409d962b2';
 
 export function getDashboardMock(): DashboardMock {
   return {
     contractAddress: CONTRACT_ADDRESS,
-    contractAddressShort: '0x9cAF...20AEF',
+    contractAddressShort: '0xB273...62b2',
     stats: [
       {
         variant: 'primary',
         title: '合约部署地址',
-        value: '0x9cAF...20AEF',
+        value: '0xB273...62b2',
         description: 'Sepolia EscrowMarketplace 合约',
       },
       {

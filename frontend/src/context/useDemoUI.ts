@@ -2,11 +2,17 @@ import { createContext, useContext, type RefObject } from 'react';
 import type { ChainEvent, ToastMessage, TradeState, TxStatus } from '../types/demo';
 import type { MarketplaceItem } from '../types/marketplace';
 import type { DemoAccount, DemoAccountId } from '../types/roles';
+import type { ContractBasics, WalletMode } from '../types/wallet';
 
 export interface DemoUIContextValue {
   walletConnected: boolean;
+  walletMode: WalletMode;
   walletAddress: string;
   walletAddressFull: string;
+  chainId: bigint | null;
+  networkLabel: string;
+  contractBasics: ContractBasics | null;
+  contractReadError: string | null;
   currentAccount: DemoAccount | null;
   setDemoAccount: (id: DemoAccountId) => void;
   disconnectDemo: () => void;
