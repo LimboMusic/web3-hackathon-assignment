@@ -28,6 +28,7 @@ describe("EscrowMarketplace", function () {
   const MISCONDUCT_EVIDENCE = ethers.keccak256(
     ethers.toUtf8Bytes("misconduct-evidence")
   );
+  const ARBITER_STAKE_POOL = ARBITER_STAKE_AMOUNT * MIN_ACTIVE_ARBITERS;
 
   const DEPLOY_ARGS = [
     DELIVERY_WINDOW,
@@ -162,6 +163,54 @@ describe("EscrowMarketplace", function () {
     const responder =
       initiator.address === seller.address ? buyer : seller;
     await respondDispute(itemId, responder);
+  }
+
+  async function getContractBalance() {
+    return ethers.provider.getBalance(await marketplace.getAddress());
+  }
+
+  async function expectPending(addr, amount) {
+    expect(await marketplace.pendingWithdrawals(addr)).to.equal(amount);
+  }
+
+  async function expectNoFurtherSettlement(itemId) {
+    await expect(requestRefund(itemId)).to.be.revertedWithCustomError(
+      marketplace,
+      "InvalidState"
+    );
+    await expect(confirmReceived(itemId)).to.be.revertedWithCustomError(
+      marketplace,
+      "InvalidState"
+    );
+    await expect(approveRefund(itemId)).to.be.revertedWithCustomError(
+      marketplace,
+      "RefundNotRequested"
+    );
+    await expect(
+      openDispute(itemId, buyer, BUYER_EVIDENCE)
+    ).to.be.revertedWithCustomError(marketplace, "InvalidState");
+    await expect(releaseAfterTimeout(itemId)).to.be.revertedWithCustomError(
+      marketplace,
+      "InvalidState"
+    );
+  }
+
+  async function runNormalTrade(itemId = 1) {
+    if (itemId === 1) {
+      await createItem();
+    }
+    await purchaseItem(itemId);
+    await markDelivered(itemId);
+    await confirmReceived(itemId);
+  }
+
+  async function runNegotiatedRefund(itemId = 1) {
+    if (itemId === 1) {
+      await createItem();
+    }
+    await purchaseItem(itemId);
+    await requestRefund(itemId);
+    await approveRefund(itemId);
   }
 
   describe("createItem", function () {
@@ -1765,6 +1814,17 @@ describe("EscrowMarketplace", function () {
       expect(await marketplace.buyerWinCount(buyer.address)).to.equal(0n);
       expect(await marketplace.sellerWinCount(seller.address)).to.equal(1n);
     });
+
+    it("does not increment completed trade counts on approveRefund", async function () {
+      await createItem();
+      await purchaseItem(1);
+      await requestRefund(1);
+
+      await approveRefund(1);
+
+      expect(await marketplace.completedTradeCount(buyer.address)).to.equal(0n);
+      expect(await marketplace.completedTradeCount(seller.address)).to.equal(0n);
+    });
   });
 
   describe("reportNoVote", function () {
@@ -1808,6 +1868,16 @@ describe("EscrowMarketplace", function () {
           .connect(other)
           .reportNoVote(1, arbiter3.address, { value: REPORT_DEPOSIT - 1n })
       ).to.be.revertedWithCustomError(marketplace, "IncorrectReportDeposit");
+    });
+
+    it("reverts when reporting arbiter who withdrew after dispute ended", async function () {
+      await withdrawArbiterStake(arbiter3);
+
+      await expect(
+        marketplace
+          .connect(other)
+          .reportNoVote(1, arbiter3.address, { value: REPORT_DEPOSIT })
+      ).to.be.revertedWithCustomError(marketplace, "InvalidReportTarget");
     });
   });
 
@@ -1900,6 +1970,324 @@ describe("EscrowMarketplace", function () {
       expect(
         await marketplace.pendingWithdrawals(arbiter3.address)
       ).to.equal(REPORT_DEPOSIT);
+    });
+  });
+
+  describe("demo flows", function () {
+    it("completes happy-path trade from listing to seller withdrawal", async function () {
+      await createItem();
+      expect((await getItem(1)).state).to.equal(State.Created);
+
+      await purchaseItem(1);
+      expect((await getItem(1)).state).to.equal(State.Locked);
+
+      await markDelivered(1);
+      expect((await getItem(1)).state).to.equal(State.Delivered);
+
+      await confirmReceived(1);
+      const item = await getItem(1);
+      expect(item.state).to.equal(State.Inactive);
+      await expectPending(seller.address, PRICE + SELLER_STAKE_AMOUNT);
+
+      await expect(
+        marketplace.connect(seller).withdrawProceeds()
+      ).to.changeEtherBalances(
+        [marketplace, seller],
+        [-(PRICE + SELLER_STAKE_AMOUNT), PRICE + SELLER_STAKE_AMOUNT]
+      );
+      await expectPending(seller.address, 0n);
+
+      await expectNoFurtherSettlement(1);
+    });
+
+    it("completes negotiated refund and returns funds to both parties", async function () {
+      await runNegotiatedRefund(1);
+
+      const item = await getItem(1);
+      expect(item.state).to.equal(State.Inactive);
+      await expectPending(buyer.address, PRICE);
+      await expectPending(seller.address, SELLER_STAKE_AMOUNT);
+
+      await marketplace.connect(buyer).withdrawProceeds();
+      await marketplace.connect(seller).withdrawProceeds();
+      await expectPending(buyer.address, 0n);
+      await expectPending(seller.address, 0n);
+
+      await expectNoFurtherSettlement(1);
+    });
+
+    it("resolves dispute via arbitration with buyer-win outcome", async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+      await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
+      await voteDispute(1, arbiter1, true);
+      await voteDispute(1, arbiter2, true);
+
+      const item = await getItem(1);
+      expect(item.state).to.equal(State.Inactive);
+      await expectPending(buyer.address, PRICE + DISPUTE_DEPOSIT);
+      await expectPending(owner.address, SELLER_STAKE_AMOUNT);
+
+      const rewardEach = DISPUTE_DEPOSIT / 2n;
+      await expectPending(arbiter1.address, rewardEach);
+      await expectPending(arbiter2.address, rewardEach);
+
+      await expectNoFurtherSettlement(1);
+    });
+
+    it("resolves dispute via arbitration with seller-win outcome", async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+      await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
+      await voteDispute(1, arbiter1, false);
+      await voteDispute(1, arbiter2, false);
+
+      const item = await getItem(1);
+      expect(item.state).to.equal(State.Inactive);
+      await expectPending(seller.address, PRICE + DISPUTE_DEPOSIT + SELLER_STAKE_AMOUNT);
+
+      const rewardEach = DISPUTE_DEPOSIT / 2n;
+      await expectPending(arbiter1.address, rewardEach);
+      await expectPending(arbiter2.address, rewardEach);
+
+      await expectNoFurtherSettlement(1);
+    });
+
+    it("falls back to timeout rules when parties stall", async function () {
+      await setupArbiters();
+
+      await createItem();
+      await purchaseItem(1);
+      await increaseTime(DELIVERY_WINDOW + 1n);
+      await expect(markDelivered(1)).to.be.revertedWithCustomError(
+        marketplace,
+        "DeliveryTimeoutExceeded"
+      );
+
+      await createItem();
+      await purchaseItem(2);
+      await markDelivered(2);
+      await increaseTime(CONFIRM_WINDOW);
+      await releaseAfterTimeout(2);
+      expect((await getItem(2)).state).to.equal(State.Inactive);
+      await expectPending(seller.address, PRICE + SELLER_STAKE_AMOUNT);
+
+      await createItem();
+      await purchaseItem(3);
+      await openDispute(3, buyer, BUYER_EVIDENCE);
+      await increaseTime(DISPUTE_DEPOSIT_WINDOW + 1n);
+      await marketplace.resolveDisputeDepositTimeout(3);
+      expect((await getItem(3)).state).to.equal(State.Inactive);
+      await expectPending(buyer.address, PRICE + DISPUTE_DEPOSIT);
+
+      await createItem();
+      await purchaseItem(4);
+      await openAndRespondDispute(4, buyer, BUYER_EVIDENCE);
+      await increaseTime(DISPUTE_WINDOW + 1n);
+      await marketplace.resolveDisputeTimeout(4);
+      expect((await getItem(4)).state).to.equal(State.Inactive);
+      await expectPending(
+        buyer.address,
+        (PRICE + DISPUTE_DEPOSIT) * 2n
+      );
+    });
+  });
+
+  describe("fund accounting", function () {
+    it("tracks contract balance after purchase", async function () {
+      await createItem();
+      await purchaseItem(1);
+      expect(await getContractBalance()).to.equal(PRICE + SELLER_STAKE_AMOUNT);
+    });
+
+    it("tracks contract balance after dispute deposits are locked", async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+      await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
+
+      expect(await getContractBalance()).to.equal(
+        PRICE + SELLER_STAKE_AMOUNT + DISPUTE_DEPOSIT * 2n + ARBITER_STAKE_POOL
+      );
+    });
+
+    it("preserves funds in contract through normal settlement until withdrawal", async function () {
+      await runNormalTrade(1);
+      await expectPending(seller.address, PRICE + SELLER_STAKE_AMOUNT);
+      expect(await getContractBalance()).to.equal(PRICE + SELLER_STAKE_AMOUNT);
+
+      await marketplace.connect(seller).withdrawProceeds();
+      await expectPending(seller.address, 0n);
+      expect(await getContractBalance()).to.equal(0n);
+    });
+
+    it("preserves funds in contract through negotiated refund until withdrawal", async function () {
+      await runNegotiatedRefund(1);
+      await expectPending(buyer.address, PRICE);
+      await expectPending(seller.address, SELLER_STAKE_AMOUNT);
+      expect(await getContractBalance()).to.equal(PRICE + SELLER_STAKE_AMOUNT);
+    });
+
+    it("accounts for slashed seller stake on buyer-win arbitration", async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+      await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
+      await voteDispute(1, arbiter1, true);
+      await voteDispute(1, arbiter2, true);
+
+      await expectPending(buyer.address, PRICE + DISPUTE_DEPOSIT);
+      await expectPending(owner.address, SELLER_STAKE_AMOUNT);
+      expect(await getContractBalance()).to.equal(
+        PRICE + DISPUTE_DEPOSIT * 2n + SELLER_STAKE_AMOUNT + ARBITER_STAKE_POOL
+      );
+    });
+
+    it("accounts for returned seller stake on seller-win arbitration", async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+      await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
+      await voteDispute(1, arbiter1, false);
+      await voteDispute(1, arbiter2, false);
+
+      await expectPending(seller.address, PRICE + DISPUTE_DEPOSIT + SELLER_STAKE_AMOUNT);
+      expect(await getContractBalance()).to.equal(
+        PRICE + DISPUTE_DEPOSIT * 2n + SELLER_STAKE_AMOUNT + ARBITER_STAKE_POOL
+      );
+    });
+  });
+
+  describe("permission and state guards", function () {
+    it("reverts when non-seller calls releaseAfterTimeout", async function () {
+      await createItem();
+      await purchaseItem(1);
+      await markDelivered(1);
+      await increaseTime(CONFIRM_WINDOW);
+
+      await expect(
+        releaseAfterTimeout(1, buyer)
+      ).to.be.revertedWithCustomError(marketplace, "NotSeller");
+    });
+
+    it("blocks settlement actions after normal trade completes", async function () {
+      await runNormalTrade(1);
+      await expectNoFurtherSettlement(1);
+    });
+
+    it("blocks settlement actions after negotiated refund completes", async function () {
+      await runNegotiatedRefund(1);
+      await expectNoFurtherSettlement(1);
+    });
+
+    it("blocks settlement actions after arbitration resolves", async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+      await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
+      await voteDispute(1, arbiter1, true);
+      await voteDispute(1, arbiter2, true);
+
+      await expectNoFurtherSettlement(1);
+    });
+
+    it("reverts when non-buyer tries to confirm received", async function () {
+      await createItem();
+      await purchaseItem(1);
+      await markDelivered(1);
+
+      await expect(
+        confirmReceived(1, other)
+      ).to.be.revertedWithCustomError(marketplace, "NotBuyer");
+    });
+
+    it("reverts when non-party opens dispute", async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+
+      await expect(
+        openDispute(1, other, BUYER_EVIDENCE)
+      ).to.be.revertedWithCustomError(marketplace, "NotPartyToDispute");
+    });
+  });
+
+  describe("arbitration edge cases", function () {
+    beforeEach(async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+      await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
+    });
+
+    it("reverts on duplicate vote after resolution", async function () {
+      await voteDispute(1, arbiter1, true);
+      await voteDispute(1, arbiter2, true);
+
+      await expect(
+        voteDispute(1, arbiter3, true)
+      ).to.be.revertedWithCustomError(marketplace, "NotInDisputedState");
+    });
+
+    it("blocks duplicate timeout resolution after vote majority resolves dispute", async function () {
+      await voteDispute(1, arbiter1, true);
+      await voteDispute(1, arbiter2, true);
+
+      await increaseTime(DISPUTE_WINDOW + 1n);
+      await expect(
+        marketplace.resolveDisputeTimeout(1)
+      ).to.be.revertedWithCustomError(marketplace, "NotInDisputedState");
+    });
+
+    it("blocks deposit timeout resolution after vote majority resolves dispute", async function () {
+      await voteDispute(1, arbiter1, true);
+      await voteDispute(1, arbiter2, true);
+
+      await expect(
+        marketplace.resolveDisputeDepositTimeout(1)
+      ).to.be.revertedWithCustomError(marketplace, "InvalidState");
+    });
+  });
+
+  describe("reporting edge cases", function () {
+    beforeEach(async function () {
+      await setupArbiters();
+      await createItem();
+      await purchaseItem(1);
+      await openAndRespondDispute(1, buyer, BUYER_EVIDENCE);
+      await voteDispute(1, arbiter1, true);
+      await voteDispute(1, arbiter2, true);
+    });
+
+    it("reverts when owner resolves report twice", async function () {
+      await marketplace
+        .connect(other)
+        .reportMisconduct(1, arbiter3.address, MISCONDUCT_EVIDENCE, {
+          value: REPORT_DEPOSIT,
+        });
+
+      await marketplace.connect(owner).resolveReport(1, true);
+
+      await expect(
+        marketplace.connect(owner).resolveReport(1, true)
+      ).to.be.revertedWithCustomError(marketplace, "InvalidReportStatus");
+    });
+
+    it("reverts when non-owner resolves misconduct report", async function () {
+      await marketplace
+        .connect(other)
+        .reportMisconduct(1, arbiter3.address, MISCONDUCT_EVIDENCE, {
+          value: REPORT_DEPOSIT,
+        });
+
+      await expect(
+        marketplace.connect(buyer).resolveReport(1, true)
+      ).to.be.revertedWithCustomError(
+        marketplace,
+        "OwnableUnauthorizedAccount"
+      );
     });
   });
 });

@@ -127,3 +127,48 @@ ObsidianVault/04-开发记录/部署记录.md
 - Alchemy / Infura 等私密 API Key
 
 如果需要环境变量，请提交 `.env.example`，不要提交真实配置。
+
+## Sepolia 部署记录
+
+| 项目 | 值 |
+|------|-----|
+| 部署时间 | 2026-06-28T11:44:03.237Z（UTC） |
+| 合约名称 | EscrowMarketplace |
+| 合约地址 | `0x9cAF8D529AE7f6bCB6168fbF16a7d2C709220AEF` |
+| 部署账户 | `0xdf300A9a444138a8f503C801d48B7490cD894416` |
+| 网络 | Sepolia（chainId `11155111`） |
+| 交易哈希 | `0xe10349ad5a129f27334f1f97ce46f7f30067d69db8db1959cb13d017676fc00e` |
+| 区块号 | 11158061 |
+| 部署产物 | `deployments/sepolia/EscrowMarketplace.json` |
+
+### 构造参数
+
+| 参数 | 值 |
+|------|-----|
+| `deliveryWindow` | 3600 秒 |
+| `confirmWindow` | 3600 秒 |
+| `arbiterStakeAmount` | 0.1 ETH |
+| `minActiveArbiters` | 3 |
+| `disputeDeposit` | 0.001 ETH |
+| `disputeDepositWindow` | 3600 秒 |
+| `disputeWindow` | 3600 秒 |
+| `sellerStakeAmount` | 0.001 ETH |
+| `reportDeposit` | 0.0005 ETH |
+
+### 区块浏览器
+
+- 合约：https://sepolia.etherscan.io/address/0x9cAF8D529AE7f6bCB6168fbF16a7d2C709220AEF
+- 部署交易：https://sepolia.etherscan.io/tx/0xe10349ad5a129f27334f1f97ce46f7f30067d69db8db1959cb13d017676fc00e
+
+### 重新部署
+
+1. 复制 `.env.example` 为 `.env`，填写 `SEPOLIA_RPC_URL` 与 `PRIVATE_KEY`。
+2. 运行：
+
+```bash
+npm run deploy:sepolia
+```
+
+前端接入时可直接读取 `deployments/sepolia/EscrowMarketplace.json` 中的 `address` 与 `abi`。
+
+更完整的记录见 `ObsidianVault/04-开发记录/部署记录.md`。

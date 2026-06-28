@@ -41,7 +41,7 @@
 - Hardhat 或 Remix IDE
 - MetaMask
 - Ethers.js
-- React 和 Vite 前端
+- React + TypeScript + Vite 前端
 - Sepolia 测试网
 - Obsidian 文档库
 - OpenSpec 变更规格
@@ -53,7 +53,7 @@
 - `contracts/`：Solidity 合约
 - `scripts/`：部署脚本
 - `test/`：Hardhat 测试
-- `frontend/`：React/Vite Demo 前端
+- `frontend/`：React + TypeScript + Vite Demo 前端
 
 ## 全局约束
 

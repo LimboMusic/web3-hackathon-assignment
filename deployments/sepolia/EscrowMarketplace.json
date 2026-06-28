@@ -1,0 +1,1975 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "contractName": "EscrowMarketplace",
+  "address": "0x9cAF8D529AE7f6bCB6168fbF16a7d2C709220AEF",
+  "transactionHash": "0xe10349ad5a129f27334f1f97ce46f7f30067d69db8db1959cb13d017676fc00e",
+  "blockNumber": 11158061,
+  "deployer": "0xdf300A9a444138a8f503C801d48B7490cD894416",
+  "deployedAt": "2026-06-28T11:44:03.237Z",
+  "constructorArgs": {
+    "deliveryWindow": "3600",
+    "confirmWindow": "3600",
+    "arbiterStakeAmount": "100000000000000000",
+    "minActiveArbiters": "3",
+    "disputeDeposit": "1000000000000000",
+    "disputeDepositWindow": "3600",
+    "disputeWindow": "3600",
+    "sellerStakeAmount": "1000000000000000",
+    "reportDeposit": "500000000000000"
+  },
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_deliveryWindow",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_confirmWindow",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_arbiterStakeAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_minActiveArbiters",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_disputeDeposit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_disputeDepositWindow",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_disputeWindow",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_sellerStakeAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_reportDeposit",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "AlreadyActiveArbiter",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "AlreadyVoted",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ArbiterLockedInDispute",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ArbiterNotLockedInDispute",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ConflictOfInterestArbiter",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DeliveryTimeoutExceeded",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeAlreadyResolved",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeDepositWindowExpired",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeDepositWindowNotExpired",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeNotResolved",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeNotTimedOut",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "EmptyEvidenceHash",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "EmptyMetadata",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "IncorrectArbiterStakeAmount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "IncorrectDisputeDeposit",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "IncorrectPayment",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "IncorrectReportDeposit",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "IncorrectSellerStakeAmount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InsufficientActiveArbiters",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidArbiterStakeAmount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidConfirmWindow",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidDeliveryWindow",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidDisputeDeposit",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidDisputeDepositWindow",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidDisputeWindow",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidMinActiveArbiters",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidReportDeposit",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidReportStatus",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidReportTarget",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidSellerStakeAmount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidState",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ItemNotAvailable",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ItemNotFound",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotActiveArbiter",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotBuyer",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotDisputeResponder",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotEligibleToVote",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotInDisputedState",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotMisconductReport",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotPartyToDispute",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotSeller",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotYetDelivered",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NothingToWithdraw",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableInvalidOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableUnauthorizedAccount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "PendingRefundBlocksConfirm",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "PendingRefundBlocksRelease",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ReentrancyGuardReentrantCall",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "RefundAlreadyRequested",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "RefundNotRequested",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ReportNotFound",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ResponderDepositAlreadyPaid",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "SellerCannotBuyOwnItem",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "SellerStakeAlreadySettled",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TimeoutNotReached",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TransferFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroPrice",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "arbiter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "ArbiterStaked",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "arbiter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "supportBuyer",
+          "type": "bool"
+        }
+      ],
+      "name": "ArbiterVoted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "arbiter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "ArbiterWithdrawn",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "initiator",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "supportBuyer",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "DisputeOpened",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "buyerWins",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "name": "DisputeResolved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "responder",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeResponded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "arbiter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "DisputeRewardRecorded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "submitter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "EvidenceSubmitted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "seller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "metadataHash",
+          "type": "string"
+        }
+      ],
+      "name": "ItemCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "seller",
+          "type": "address"
+        }
+      ],
+      "name": "ItemDelisted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "seller",
+          "type": "address"
+        }
+      ],
+      "name": "ItemDelivered",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "oldMetadataHash",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "newMetadataHash",
+          "type": "string"
+        }
+      ],
+      "name": "ItemMetadataUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "oldPrice",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newPrice",
+          "type": "uint256"
+        }
+      ],
+      "name": "ItemPriceUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        }
+      ],
+      "name": "ItemPurchased",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "buyer",
+          "type": "address"
+        }
+      ],
+      "name": "ItemReceived",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "seller",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "RefundApproved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "buyer",
+          "type": "address"
+        }
+      ],
+      "name": "RefundRequested",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "reportId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "reporter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "reported",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum EscrowMarketplace.ReportType",
+          "name": "reportType",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "ReportCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "reportId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "upheld",
+          "type": "bool"
+        }
+      ],
+      "name": "ReportResolved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "completedTrades",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "disputeCount",
+          "type": "uint256"
+        }
+      ],
+      "name": "ReputationUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "seller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "SellerStakeLocked",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "seller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "SellerStakeReleased",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "seller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "SellerStakeSlashed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "seller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "TimeoutReleased",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Withdrawal",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "activeArbiterCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "activeArbiters",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "approveRefund",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "arbiterHasVoted",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "arbiterLockedDisputeCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "arbiterStakeAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "arbiterStakes",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "arbiterVoteSupportBuyer",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "buyerWinCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "completedTradeCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "confirmReceived",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "confirmWindow",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "metadataHash",
+          "type": "string"
+        }
+      ],
+      "name": "createItem",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "delistItem",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "deliveryWindow",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "disputeCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "disputeDeposit",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "disputeDepositWindow",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "disputeWindow",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "disputes",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "disputeInitiator",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "initiatorSupportsBuyer",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "disputeDepositStartedAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "disputeStartedAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "buyerDepositPaid",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "sellerDepositPaid",
+          "type": "bool"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "buyerEvidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "sellerEvidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "buyerVotes",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "sellerVotes",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "arbiterCountSnapshot",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "voteThresholdSnapshot",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "resolved",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "reputationCounted",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "arbiter",
+          "type": "address"
+        }
+      ],
+      "name": "isEligibleArbiter",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "items",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address payable",
+          "name": "seller",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "metadataHash",
+          "type": "string"
+        },
+        {
+          "internalType": "enum EscrowMarketplace.State",
+          "name": "state",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "createdAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "paidAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deliveredAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "delisted",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "refundRequested",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "refundRequestedAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "sellerStake",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "sellerStakeSettled",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "sellerStakeSlashed",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "markDelivered",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "minActiveArbiters",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nextItemId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nextReportId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "openDispute",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "pendingWithdrawals",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "purchaseItem",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "releaseAfterTimeout",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "reportDeposit",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "arbiter",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "reportMisconduct",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "arbiter",
+          "type": "address"
+        }
+      ],
+      "name": "reportNoVote",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "reports",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "reporter",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "reported",
+          "type": "address"
+        },
+        {
+          "internalType": "enum EscrowMarketplace.ReportType",
+          "name": "reportType",
+          "type": "uint8"
+        },
+        {
+          "internalType": "enum EscrowMarketplace.ReportStatus",
+          "name": "status",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deposit",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "requestRefund",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "resolveDisputeDepositTimeout",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "resolveDisputeTimeout",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "reportId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "upheld",
+          "type": "bool"
+        }
+      ],
+      "name": "resolveReport",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        }
+      ],
+      "name": "respondDispute",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "sellerStakeAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "sellerStakeSlashedCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "sellerWinCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "stakeAsArbiter",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "submitEvidence",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "newMetadataHash",
+          "type": "string"
+        }
+      ],
+      "name": "updateMetadata",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newPrice",
+          "type": "uint256"
+        }
+      ],
+      "name": "updatePrice",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "itemId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "supportBuyer",
+          "type": "bool"
+        }
+      ],
+      "name": "voteDispute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "withdrawArbiterStake",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "withdrawProceeds",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}
